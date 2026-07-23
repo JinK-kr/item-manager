@@ -4,7 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>현황 대시보드 · 우리 반 물품 관리</title>
-  <link rel="stylesheet" href="style.css?v=2">
+  <!-- 그림 그리기 전에 밝기를 정한다. 안 그러면 화면이 한 번 번쩍인다. -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('classInventory.theme');
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body data-page="dashboard">
 
@@ -54,10 +63,9 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js?v=2"></script>
-  <script src="app.js?v=2"></script>
-  <script src="sidebar.js?v=2"></script>
-  <script src="dashboard.js?v=2"></script>
-  <script src="import.js?v=2"></script>
+  <script src="supabase-config.js?v=3"></script>
+  <script src="app.js?v=3"></script>
+  <script src="sidebar.js?v=3"></script>
+  <script src="dashboard.js?v=3"></script>
 </body>
 </html>

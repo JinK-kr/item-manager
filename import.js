@@ -1,12 +1,11 @@
 /* =========================================================
-   import.js — 엑셀 파일로 물품 일괄 등록 (F-04)
+   import.js — 엑셀 업로드 화면 (import.html, F-04)
 
-   흐름:  파일 고르기 → 읽고 검사 → 미리보기 → 확인 → 등록
+   흐름:  양식 받기 → 채우기 → 파일 올리기 → 미리보기 → 확인 → 등록
    읽자마자 등록하지 않는다. 실수로 두 번 올리는 걸 막기 위해서다.
 
-   엑셀 라이브러리(SheetJS, 약 900KB)는 처음부터 받지 않는다.
+   엑셀 라이브러리(SheetJS, 약 900KB)는 이 화면에서도 바로 받지 않는다.
    양식을 내려받거나 파일을 고를 때 그때 받는다.
-   대부분의 사용자는 +/− 만 누르고 가므로 그 사람들은 받을 필요가 없다.
    ========================================================= */
 (function () {
   'use strict';
@@ -35,65 +34,17 @@
     return xlsxLoading;
   }
 
-  /* ---------- 화면에 짧게 뜨는 알림 (업로드 영역이 없는 화면용) ---------- */
-  var toastTimer = null;
-  function toast(text, kind) {
-    var el = document.getElementById('nav-toast');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'nav-toast';
-      el.className = 'toast';
-      el.setAttribute('role', 'status');
-      document.body.appendChild(el);
-    }
-    el.textContent = text;
-    el.className = 'toast is-on ' + (kind || '');
-    if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { el.className = 'toast ' + (kind || ''); }, 3500);
-  }
+  var fileEl = document.getElementById('xls-file');
+  if (!fileEl) return;   // 이 화면이 아니면 아무것도 하지 않는다
 
-  /* ---------- 양식 내려받기 (두 화면 모두에서 동작) ---------- */
-
-  function downloadTemplate(say) {
-    say('양식을 만드는 중…', '');
-    ensureXLSX()
-      .then(function (XLSX) {
-        var aoa = [
-          ['물품이름', '카테고리', '수량', '등록자'],
-          ['볼펜',       '문구류',   24, '민서'],
-          ['건전지 AA',  '전자기기',  3, '도윤'],
-          ['물티슈',     '청소용품',  8, '하은'],
-          ['구급상자',   '기타',      1, '예린']
-        ];
-        var ws = XLSX.utils.aoa_to_sheet(aoa);
-        ws['!cols'] = [{ wch: 18 }, { wch: 12 }, { wch: 8 }, { wch: 12 }];
-        var wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, '물품목록');
-        XLSX.writeFile(wb, '물품등록_양식.xlsx');
-        say('양식을 내려받았어요. 카테고리는 문구류·전자기기·청소용품·기타 중에서만 적어 주세요.', 'ok');
-      })
-      .catch(function (err) { say(err.message, 'error'); });
-  }
-
-  // 왼쪽 메뉴의 '양식 내려받기'
-  var navTemplate = document.getElementById('nav-template');
-  if (navTemplate) {
-    navTemplate.addEventListener('click', function () {
-      downloadTemplate(function (text, kind) { toast(text, kind); });
-    });
-  }
-
-  /* =======================================================
-     아래는 업로드 영역이 있는 화면(index.html)에서만 동작한다
-     ======================================================= */
-
-  var fileEl     = document.getElementById('xls-file');
-  if (!fileEl) return;
-
+  var dropEl     = document.getElementById('xls-drop');
   var uploaderEl = document.getElementById('xls-uploader');
   var templateEl = document.getElementById('xls-template');
+  var stepEl     = document.getElementById('step-template');
   var previewEl  = document.getElementById('xls-preview');
   var msgEl      = document.getElementById('xls-msg');
+
+  renderSetupWarning(document.getElementById('setup-warning'));
 
   /** 한 번에 올릴 수 있는 최대 줄 수 */
   var MAX_ROWS = 500;
@@ -127,7 +78,7 @@
   /* ---------- 안내 문구 ---------- */
 
   function showMsg(text, kind) {
-    msgEl.textContent = text || '';
+    msgEl.innerHTML = text || '';
     msgEl.className = 'xls-msg ' + (kind || '');
   }
 
@@ -136,17 +87,83 @@
     pending = null;
   }
 
-  templateEl.addEventListener('click', function () {
-    downloadTemplate(showMsg);
-  });
+  /* ---------- 1단계. 양식 내려받기 ---------- */
 
-  /* ---------- 파일 읽기 ---------- */
+  function downloadTemplate() {
+    showMsg('양식을 만드는 중…', '');
+    ensureXLSX()
+      .then(function (XLSX) {
+        var aoa = [
+          ['물품이름', '카테고리', '수량', '등록자'],
+          ['볼펜',       '문구류',   24, '민서'],
+          ['건전지 AA',  '전자기기',  3, '도윤'],
+          ['물티슈',     '청소용품',  8, '하은'],
+          ['구급상자',   '기타',      1, '예린']
+        ];
+        var ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = [{ wch: 18 }, { wch: 12 }, { wch: 8 }, { wch: 12 }];
+        var wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '물품목록');
+        XLSX.writeFile(wb, '물품등록_양식.xlsx');
+        showMsg('양식을 내려받았어요. 채운 다음 아래에 올려 주세요.', 'ok');
+      })
+      .catch(function (err) { showMsg(err.message, 'error'); });
+  }
+
+  templateEl.addEventListener('click', downloadTemplate);
+
+  /** 1단계 칸을 잠깐 밝혀서 눈에 띄게 한다 */
+  function highlightTemplateStep() {
+    stepEl.classList.remove('is-flash');
+    void stepEl.offsetWidth;          // 애니메이션을 다시 트는 방법
+    stepEl.classList.add('is-flash');
+  }
+
+  // 왼쪽 메뉴의 '양식 내려받기' — 이미 이 화면에 있으면 옮겨 가지 않고 바로 받는다
+  var navTemplate = document.getElementById('nav-template');
+  if (navTemplate) {
+    navTemplate.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      highlightTemplateStep();
+      downloadTemplate();
+    });
+  }
+
+  // 다른 화면에서 '양식 내려받기' 로 넘어온 경우 (주소 끝이 #template)
+  if (location.hash === '#template') {
+    highlightTemplateStep();
+    downloadTemplate();
+  }
+
+  /* ---------- 3단계. 파일 읽기 ---------- */
 
   fileEl.addEventListener('change', function () {
     var file = fileEl.files && fileEl.files[0];
-    clearPreview();
-    if (!file) return;
+    if (file) readFile(file);
+  });
 
+  /* 끌어다 놓기 */
+  ['dragenter', 'dragover'].forEach(function (type) {
+    dropEl.addEventListener(type, function (ev) {
+      ev.preventDefault();
+      dropEl.classList.add('is-over');
+    });
+  });
+  ['dragleave', 'dragend', 'drop'].forEach(function (type) {
+    dropEl.addEventListener(type, function () { dropEl.classList.remove('is-over'); });
+  });
+  dropEl.addEventListener('drop', function (ev) {
+    ev.preventDefault();
+    var file = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+    if (file) readFile(file);
+  });
+
+  // 칸 밖에 떨어뜨렸을 때 브라우저가 파일을 열어 버리는 걸 막는다
+  window.addEventListener('dragover', function (ev) { ev.preventDefault(); });
+  window.addEventListener('drop', function (ev) { ev.preventDefault(); });
+
+  function readFile(file) {
+    clearPreview();
     showMsg('파일을 읽는 중…', '');
 
     ensureXLSX()
@@ -169,7 +186,7 @@
       })
       .then(function (matrix) { handleMatrix(matrix, file.name); })
       .catch(function (err) { showMsg(err.message, 'error'); });
-  });
+  }
 
   /* ---------- 줄마다 검사하기 ---------- */
 
@@ -192,7 +209,7 @@
     if (colOf.category === undefined) missing.push('카테고리');
     if (colOf.quantity === undefined) missing.push('수량');
     if (missing.length) {
-      showMsg('첫 줄에서 ' + missing.join(', ') + ' 칸을 찾지 못했어요. ' +
+      showMsg('첫 줄에서 ' + escapeHtml(missing.join(', ')) + ' 칸을 찾지 못했어요. ' +
               '양식을 내려받아 헤더를 맞춰 주세요.', 'error');
       return;
     }
@@ -242,12 +259,12 @@
     });
 
     if (ok.length === 0) {
-      showMsg(fileName + ' 에서 등록할 수 있는 줄이 없어요.', 'error');
-      renderSkipped(skipped);
+      showMsg(escapeHtml(fileName) + ' 에서 등록할 수 있는 줄이 없어요.', 'error');
+      previewEl.innerHTML = skippedHtml(skipped);
       return;
     }
 
-    showMsg(fileName + ' 을(를) 읽었어요. 아래 내용을 확인하고 등록해 주세요.', '');
+    showMsg(escapeHtml(fileName) + ' 을(를) 읽었어요. 아래 내용을 확인하고 등록해 주세요.', '');
     buildPreview(ok, skipped);
   }
 
@@ -277,7 +294,7 @@
       })
       .catch(function (err) {
         previewEl.innerHTML = '';
-        showMsg(err.message, 'error');
+        showMsg(escapeHtml(err.message), 'error');
       });
   }
 
@@ -339,10 +356,6 @@
       '</ul></details>';
   }
 
-  function renderSkipped(skipped) {
-    previewEl.innerHTML = skippedHtml(skipped);
-  }
-
   /* ---------- 실제로 등록하기 ---------- */
 
   function runImport() {
@@ -361,30 +374,15 @@
 
         fileEl.value = '';
         clearPreview();
-        showMsg('등록했어요 — 새로 추가 ' + made + '건, 수량 합산 ' + merged + '건.', 'ok');
-
-        // 목록 화면에 새로 읽으라고 알린다
-        window.dispatchEvent(new CustomEvent('items-changed'));
+        // 이 화면에는 목록이 없으므로 보러 갈 링크를 같이 준다
+        showMsg('등록했어요 — 새로 추가 ' + made + '건, 수량 합산 ' + merged + '건. ' +
+                '<a href="index.html">물품 목록에서 확인하기 →</a>', 'ok');
       })
       .catch(function (err) {
-        showMsg(err.message + ' (아무것도 등록되지 않았어요)', 'error');
+        showMsg(escapeHtml(err.message) + ' (아무것도 등록되지 않았어요)', 'error');
         confirmBtn.disabled = false;
         cancelBtn.disabled = false;
         confirmBtn.textContent = pending.length + '건 등록하기';
       });
   }
-
-  /* ---------- 다른 화면에서 '엑셀 업로드' 로 넘어왔을 때 ---------- */
-  // 주소 끝이 #import 면 이 칸을 잠깐 밝혀서 어디로 왔는지 알려 준다
-  function flashImport() {
-    if (location.hash !== '#import') return;
-    var card = document.getElementById('import');
-    if (!card) return;
-    card.classList.remove('is-flash');
-    void card.offsetWidth;            // 애니메이션을 다시 트는 방법
-    card.classList.add('is-flash');
-    fileEl.focus({ preventScroll: true });
-  }
-  window.addEventListener('hashchange', flashImport);
-  flashImport();
 })();

@@ -4,7 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>물품 목록 · 우리 반 물품 관리</title>
-  <link rel="stylesheet" href="style.css?v=2">
+  <!-- 그림 그리기 전에 밝기를 정한다. 안 그러면 화면이 한 번 번쩍인다. -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('classInventory.theme');
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body data-page="list">
 
@@ -54,37 +63,6 @@
         <p id="form-msg" class="form-msg" role="status" aria-live="polite"></p>
       </section>
 
-      <!-- F-04 엑셀 일괄 등록 (왼쪽 메뉴의 '엑셀 업로드' 가 여기로 온다) -->
-      <section class="card" id="import">
-        <h2 class="card-title">엑셀로 한 번에 등록하기
-          <span class="count">처음 재고를 넣을 때 편해요</span>
-        </h2>
-
-        <p class="xls-help">
-          첫 줄에 <code>물품이름</code> · <code>카테고리</code> · <code>수량</code> · <code>등록자</code> 를 적고,
-          둘째 줄부터 물품을 적어 주세요. <code>.csv</code> 도 됩니다.<br>
-          이미 있는 물품과 이름이 같으면 <strong>수량을 더합니다.</strong>
-          등록하기 전에 무엇이 들어갈지 먼저 보여 드려요.
-        </p>
-
-        <div class="xls-controls">
-          <button type="button" class="btn" id="xls-template">양식 내려받기</button>
-
-          <div class="field">
-            <label for="xls-uploader">등록자 칸이 빈 줄에 쓸 닉네임</label>
-            <input type="text" id="xls-uploader" maxlength="10" placeholder="예) 민서" autocomplete="off">
-          </div>
-
-          <div class="field">
-            <label for="xls-file">파일 고르기</label>
-            <input type="file" id="xls-file" accept=".xlsx,.xls,.csv">
-          </div>
-        </div>
-
-        <p id="xls-msg" class="xls-msg" role="status" aria-live="polite"></p>
-        <div id="xls-preview"></div>
-      </section>
-
       <!-- 물품 목록 (F-02 수량 조절 · F-03 삭제) -->
       <section class="card">
         <h2 class="card-title">등록된 물품 <span class="count" id="item-count"></span></h2>
@@ -95,10 +73,9 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js?v=2"></script>
-  <script src="app.js?v=2"></script>
-  <script src="sidebar.js?v=2"></script>
-  <script src="index.js?v=2"></script>
-  <script src="import.js?v=2"></script>
+  <script src="supabase-config.js?v=3"></script>
+  <script src="app.js?v=3"></script>
+  <script src="sidebar.js?v=3"></script>
+  <script src="index.js?v=3"></script>
 </body>
 </html>

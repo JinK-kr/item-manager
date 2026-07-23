@@ -1,10 +1,10 @@
 /* =========================================================
-   sidebar.js — 두 화면이 함께 쓰는 왼쪽 메뉴
+   sidebar.js — 세 화면이 함께 쓰는 왼쪽 메뉴
 
    메뉴 HTML 을 여기서 한 번만 만든다.
-   두 페이지에 같은 내용을 두 번 적어 두면 한쪽만 고치는 실수가 생긴다.
+   여러 페이지에 같은 내용을 적어 두면 한쪽만 고치는 실수가 생긴다.
 
-   쓰는 법:  <body data-page="list">  또는  <body data-page="dashboard">
+   쓰는 법:  <body data-page="list | dashboard | import">
              <div id="sidebar-slot"></div>
    ========================================================= */
 (function () {
@@ -40,15 +40,11 @@
   function itemHtml(opts) {
     var active = opts.page === page;
     var cls = 'nav-item' + (active ? ' is-active' : '');
-    var badge = opts.badgeId
-      ? '<span class="nav-badge" id="' + opts.badgeId + '"></span>'
-      : '';
+    var badge = opts.badgeId ? '<span class="nav-badge" id="' + opts.badgeId + '"></span>' : '';
     var inner = ICON[opts.icon] + '<span class="nav-label">' + opts.label + '</span>' + badge;
 
-    if (opts.action) {
-      return '<button type="button" class="' + cls + '" id="' + opts.action + '">' + inner + '</button>';
-    }
     return '<a class="' + cls + '" href="' + opts.href + '"' +
+           (opts.id ? ' id="' + opts.id + '"' : '') +
            (active ? ' aria-current="page"' : '') + '>' + inner + '</a>';
   }
 
@@ -70,15 +66,26 @@
 
       '<nav class="nav" aria-label="주요 메뉴">' +
         '<p class="nav-group">관리</p>' +
-        itemHtml({ label: '물품 목록', icon: 'list',  href: 'index.html',
+        itemHtml({ label: '물품 목록', icon: 'list', href: 'index.html',
                    page: 'list', badgeId: 'nav-count' }) +
         itemHtml({ label: '현황 대시보드', icon: 'chart', href: 'dashboard.html',
                    page: 'dashboard' }) +
 
         '<p class="nav-group">데이터</p>' +
-        itemHtml({ label: '엑셀 업로드', icon: 'upload', href: 'index.html#import' }) +
-        itemHtml({ label: '양식 내려받기', icon: 'download', action: 'nav-template' }) +
+        itemHtml({ label: '엑셀 업로드', icon: 'upload', href: 'import.html',
+                   page: 'import' }) +
+        itemHtml({ label: '양식 내려받기', icon: 'download', href: 'import.html#template',
+                   id: 'nav-template' }) +
       '</nav>' +
+
+      '<div class="theme-box">' +
+        '<p class="nav-group">화면</p>' +
+        '<div class="theme-row" role="group" aria-label="화면 밝기">' +
+          '<button type="button" class="theme-btn" data-theme-set="system">시스템</button>' +
+          '<button type="button" class="theme-btn" data-theme-set="light">밝게</button>' +
+          '<button type="button" class="theme-btn" data-theme-set="dark">어둡게</button>' +
+        '</div>' +
+      '</div>' +
 
       '<p class="nav-foot">여러 사람이 함께 씁니다.<br>바뀐 내용은 새로고침하면 보여요.</p>' +
     '</aside>';
@@ -104,7 +111,7 @@
     if (ev.key === 'Escape') setOpen(false);
   });
 
-  // 메뉴에서 어디로든 이동하면 서랍을 닫는다
+  // 메뉴에서 어디로든 이동하면 서랍을 닫는다 (밝기 버튼은 빼고)
   sidebar.addEventListener('click', function (ev) {
     if (ev.target.closest('.nav-item')) setOpen(false);
   });
@@ -117,4 +124,40 @@
     var n = ev.detail && ev.detail.count;
     badge.textContent = (typeof n === 'number') ? n : '';
   });
+
+  /* ---------- 화면 밝기 ---------- */
+  // 처음 적용은 각 HTML 의 <head> 안 짧은 스크립트가 한다.
+  // 화면이 한 번 번쩍였다가 바뀌는 걸 막으려면 그림 그리기 전에 정해야 하기 때문이다.
+  var THEME_KEY = 'classInventory.theme';
+
+  function readTheme() {
+    try {
+      var t = localStorage.getItem(THEME_KEY);
+      return (t === 'light' || t === 'dark') ? t : 'system';
+    } catch (e) { return 'system'; }
+  }
+
+  function applyTheme(t) {
+    if (t === 'system') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', t);
+
+    try {
+      if (t === 'system') localStorage.removeItem(THEME_KEY);
+      else localStorage.setItem(THEME_KEY, t);
+    } catch (e) { /* 저장 못 해도 이번 방문에는 적용된다 */ }
+
+    var btns = sidebar.querySelectorAll('.theme-btn');
+    for (var i = 0; i < btns.length; i++) {
+      var on = btns[i].getAttribute('data-theme-set') === t;
+      btns[i].classList.toggle('is-on', on);
+      btns[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+  }
+
+  sidebar.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('.theme-btn');
+    if (btn) applyTheme(btn.getAttribute('data-theme-set'));
+  });
+
+  applyTheme(readTheme());
 })();

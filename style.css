@@ -46,6 +46,13 @@
   --nav-w:           232px;   /* 왼쪽 메뉴 너비 */
 }
 
+/* 어두운 색 한 벌.
+   두 군데에 똑같이 적어 둔다.
+     1) OS 가 어두운 모드일 때  (사용자가 '밝게' 를 고르지 않았다면)
+     2) 사용자가 '어둡게' 를 직접 고른 때  (OS 설정과 무관하게)
+   CSS 에는 값 묶음을 재사용하는 문법이 없어서 같은 내용을 두 번 적는다.
+   한쪽만 고치면 어긋나니 항상 같이 고칠 것. */
+
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme="light"])) {
     color-scheme: dark;
@@ -80,6 +87,41 @@
 
     --shadow:          none;
   }
+}
+
+/* 사용자가 '어둡게' 를 직접 고른 경우 (위 블록과 같은 값) */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --page:            #0d0d0d;
+  --surface-1:       #1a1a19;
+
+  --text-primary:    #ffffff;
+  --text-secondary:  #c3c2b7;
+  --text-muted:      #898781;
+
+  --border:          rgba(255, 255, 255, 0.10);
+  --gridline:        #2c2c2a;
+
+  --series-1:        #3987e5;
+  --series-2:        #d95926;
+  --series-3:        #199e70;
+  --series-4:        #c98500;
+
+  --badge-low-bg:    #3a2e12;
+  --badge-low-text:  #fab219;
+  --badge-out-bg:    #3a1e1e;
+  --badge-out-text:  #ef8a8a;
+  --tag-new-bg:      #16263a;
+  --tag-new-text:    #6da7ec;
+
+  --accent:          #3987e5;
+  --accent-text:     #ffffff;
+  --btn-bg:          #232322;
+  --btn-hover:       #2e2e2c;
+  --danger:          #ef8a8a;
+
+  --shadow:          none;
 }
 
 * { box-sizing: border-box; }
@@ -210,9 +252,39 @@ body {
   color: var(--accent-text);
 }
 
+/* ---------- 화면 밝기 고르기 ---------- */
+.theme-box { margin-top: auto; padding-top: 18px; }
+.theme-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--page);
+  border: 1px solid var(--border);
+}
+.theme-btn {
+  padding: 6px 2px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 550;
+  cursor: pointer;
+}
+.theme-btn:hover { color: var(--text-primary); }
+.theme-btn.is-on {
+  background: var(--surface-1);
+  color: var(--text-primary);
+  box-shadow: var(--shadow);
+}
+.theme-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
 .nav-foot {
-  margin: auto 0 0;
-  padding: 18px 10px 0;
+  margin: 14px 0 0;
+  padding: 0 10px;
   font-size: 11.5px;
   line-height: 1.5;
   color: var(--text-muted);
@@ -543,22 +615,99 @@ input[aria-invalid="true"] { border-color: var(--danger); }
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- 엑셀 일괄 등록 ---------- */
+/* =========================================================
+   엑셀 업로드 화면 (import.html)
+   ========================================================= */
 
-/* 왼쪽 메뉴의 '엑셀 업로드' 로 넘어오면 이 칸을 잠깐 밝힌다 */
-@keyframes card-flash {
+/* ---------- 1·2·3 단계 안내 ---------- */
+.steps {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.step {
+  position: relative;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 16px 18px;
+}
+.step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px; height: 22px;
+  margin-bottom: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+.step-title { margin: 0 0 5px; font-size: 15px; font-weight: 650; }
+.step-desc { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--text-secondary); }
+.step .btn { margin-top: 12px; }
+.step-cats { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 10px 0 0; }
+
+/* 왼쪽 메뉴의 '양식 내려받기' 로 넘어오면 1단계 칸을 잠깐 밝힌다 */
+@keyframes step-flash {
   from { box-shadow: 0 0 0 3px var(--accent); }
   to   { box-shadow: var(--shadow); }
 }
-#import.is-flash { animation: card-flash 1.4s ease-out; }
+.step.is-flash { animation: step-flash 1.4s ease-out; }
 
-.xls-help {
-  margin: 0 0 14px;
+/* ---------- 파일 놓는 칸 ---------- */
+.xls-owner-field { max-width: 260px; margin-bottom: 14px; }
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 30px 18px;
+  border: 2px dashed var(--gridline);
+  border-radius: var(--radius);
+  background: var(--page);
+  cursor: pointer;
+  text-align: center;
+}
+.dropzone:hover { border-color: var(--accent); }
+.dropzone.is-over { border-color: var(--accent); background: var(--tag-new-bg); }
+.dropzone:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dropzone input[type="file"] {
+  position: absolute;
+  width: 1px; height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.dropzone-icon {
+  width: 26px; height: 26px;
+  margin-bottom: 3px;
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.dropzone-main { font-size: 14.5px; font-weight: 600; }
+.dropzone-sub { font-size: 12.5px; color: var(--text-muted); }
+
+/* ---------- 형식 안내 ---------- */
+.sample-table tbody td { color: var(--text-secondary); }
+.rule-list {
+  margin: 14px 0 0;
+  padding-left: 20px;
   font-size: 13px;
-  line-height: 1.65;
+  line-height: 1.7;
   color: var(--text-secondary);
 }
-.xls-help code {
+.rule-list li { margin-bottom: 7px; }
+.rule-list code {
   background: var(--page);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -566,37 +715,8 @@ input[aria-invalid="true"] { border-color: var(--danger); }
   font-size: 12px;
 }
 
-.xls-controls {
-  display: flex;
-  gap: 12px;
-  align-items: end;
-  flex-wrap: wrap;
-  margin-bottom: 4px;
-}
-.xls-controls .field { min-width: 168px; }
-.xls-controls input[type="file"] {
-  font: inherit;
-  font-size: 13px;
-  color: var(--text-secondary);
-  background: var(--page);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 7px 9px;
-  width: 100%;
-}
-.xls-controls input[type="file"]::file-selector-button {
-  font: inherit;
-  font-size: 13px;
-  margin-right: 9px;
-  padding: 5px 11px;
-  cursor: pointer;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--btn-bg);
-  color: var(--text-primary);
-}
-
 .xls-msg { margin: 12px 0 0; font-size: 13.5px; min-height: 20px; color: var(--text-secondary); }
+.xls-msg a { color: var(--accent); font-weight: 600; }
 .xls-msg.error { color: var(--danger); }
 .xls-msg.ok { color: var(--text-secondary); }
 .xls-loading { font-size: 13.5px; color: var(--text-muted); margin: 12px 0 0; }
@@ -661,9 +781,12 @@ input[aria-invalid="true"] { border-color: var(--danger); }
   .form-grid .btn-primary { width: 100%; }
 }
 
-/* 왼쪽 메뉴가 자리를 먹으므로 위젯은 조금 일찍 한 줄로 내린다 */
+/* 왼쪽 메뉴가 자리를 먹으므로 위젯·단계는 조금 일찍 한 줄로 내린다 */
 @media (max-width: 980px) {
   .dash-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 860px) {
+  .steps { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* 여기부터 메뉴가 서랍으로 바뀐다 */
@@ -698,10 +821,9 @@ input[aria-invalid="true"] { border-color: var(--danger); }
   .legend { flex-basis: 100%; }
   .hero-num { font-size: 46px; }
 
-  .xls-controls { flex-direction: column; align-items: stretch; }
-  .xls-controls .field { min-width: 0; }
-  .xls-controls .btn { width: 100%; }
+  .xls-owner-field { max-width: none; }
   .xls-actions .btn { width: 100%; }
+  .dropzone { padding: 24px 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
