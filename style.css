@@ -31,6 +31,8 @@
   --badge-low-text:  #7a5200;
   --badge-out-bg:    #fce9e9;
   --badge-out-text:  #a02c2c;
+  --tag-new-bg:      #e3eefb;
+  --tag-new-text:    #1c5cab;
 
   /* 버튼 */
   --accent:          #2a78d6;
@@ -66,6 +68,8 @@
     --badge-low-text:  #fab219;
     --badge-out-bg:    #3a1e1e;
     --badge-out-text:  #ef8a8a;
+    --tag-new-bg:      #16263a;
+    --tag-new-text:    #6da7ec;
 
     --accent:          #3987e5;
     --accent-text:     #ffffff;
@@ -383,6 +387,131 @@ input[aria-invalid="true"] { border-color: var(--danger); }
   font-variant-numeric: tabular-nums;
 }
 
+/* ---------- 엑셀 일괄 등록 ---------- */
+.xls-head {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.xls-head::-webkit-details-marker { display: none; }
+.xls-head::before {
+  content: '▸';
+  color: var(--text-muted);
+  font-size: 11px;
+  transform: translateY(-1px);
+}
+.xls[open] .xls-head::before { content: '▾'; }
+.xls-head:hover { color: var(--text-primary); }
+.xls-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+.xls-body { padding-top: 14px; }
+
+.xls-help {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+.xls-help code {
+  background: var(--page);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 12px;
+}
+
+.xls-controls {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.xls-controls .field { min-width: 168px; }
+.xls-controls input[type="file"] {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: var(--page);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 9px;
+  width: 100%;
+}
+.xls-controls input[type="file"]::file-selector-button {
+  font: inherit;
+  font-size: 13px;
+  margin-right: 9px;
+  padding: 5px 11px;
+  cursor: pointer;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--btn-bg);
+  color: var(--text-primary);
+}
+
+.xls-msg { margin: 12px 0 0; font-size: 13.5px; min-height: 20px; color: var(--text-secondary); }
+.xls-msg.error { color: var(--danger); }
+.xls-msg.ok { color: var(--text-secondary); }
+.xls-loading { font-size: 13.5px; color: var(--text-muted); margin: 12px 0 0; }
+
+.xls-summary { margin: 14px 0 10px; font-size: 14px; }
+.xls-skip-count { color: var(--badge-low-text); }
+
+/* 표는 좁은 화면에서 표 안에서만 가로로 넘긴다 (본문은 넘치지 않게) */
+.xls-table-wrap {
+  overflow-x: auto;
+  max-height: 340px;      /* 줄이 많아도 화면을 다 잡아먹지 않게 */
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.xls-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.xls-table th, .xls-table td {
+  text-align: left;
+  padding: 8px 11px;
+  border-top: 1px solid var(--gridline);
+}
+.xls-table thead th {
+  border-top: none;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 12px;
+  background: var(--page);
+  position: sticky;
+  top: 0;
+}
+.xls-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.tag {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 650;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.tag-new   { background: var(--tag-new-bg);   color: var(--tag-new-text); }
+.tag-merge { background: var(--badge-low-bg); color: var(--badge-low-text); }
+
+.xls-skipped { margin-top: 12px; font-size: 13px; }
+.xls-skipped summary { cursor: pointer; color: var(--badge-low-text); }
+.xls-skipped ul { margin: 8px 0 0; padding-left: 20px; color: var(--text-secondary); }
+.xls-skipped li { margin-bottom: 4px; }
+
+.xls-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
 /* ---------- 좁은 화면 ---------- */
 @media (max-width: 760px) {
   .form-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
@@ -410,6 +539,11 @@ input[aria-invalid="true"] { border-color: var(--danger); }
   .donut { width: 150px; height: 150px; margin: 0 auto; }
   .legend { flex-basis: 100%; }
   .hero-num { font-size: 46px; }
+
+  .xls-controls { flex-direction: column; align-items: stretch; }
+  .xls-controls .field { min-width: 0; }
+  .xls-controls .btn { width: 100%; }
+  .xls-actions .btn { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

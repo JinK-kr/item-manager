@@ -86,6 +86,64 @@ grant execute on function public.change_quantity(uuid, integer) to anon, authent
 
 
 -- ---------------------------------------------------------
+-- 3-2. 엑셀 일괄 등록 함수
+--
+--    같은 이름이 이미 있으면 수량을 더하고, 없으면 새로 넣는다.
+--    이름 비교는 앞뒤 공백과 대소문자를 무시한다.
+--    한 트랜잭션으로 돌아서 중간에 실패하면 전부 취소된다
+--    (절반만 등록되는 일이 없다).
+--
+--    합산될 때 기존 카테고리와 등록자는 그대로 두고 수량만 바꾼다.
+--    +/− 버튼과 같은 방식이다.
+-- ---------------------------------------------------------
+create or replace function public.import_items(rows jsonb)
+returns table (result_action text, result_name text, result_quantity integer)
+language plpgsql
+set search_path = ''
+as $$
+declare
+  r         jsonb;
+  target_id uuid;
+  the_name  text;
+  new_qty   integer;
+begin
+  for r in select value from jsonb_array_elements(rows) loop
+    target_id := null;
+    the_name  := btrim(r->>'name');
+
+    -- 같은 이름이 여러 줄이면 가장 최근에 손댄 것에 더한다
+    select id into target_id
+      from public.items
+     where lower(btrim(name)) = lower(the_name)
+     order by updated_at desc
+     limit 1;
+
+    if target_id is not null then
+      update public.items
+         set quantity = quantity + (r->>'quantity')::integer
+       where id = target_id
+      returning quantity into new_qty;
+
+      result_action := '합산';
+    else
+      insert into public.items (name, category, quantity, owner)
+      values (the_name, r->>'category', (r->>'quantity')::integer, btrim(r->>'owner'))
+      returning quantity into new_qty;
+
+      result_action := '신규';
+    end if;
+
+    result_name     := the_name;
+    result_quantity := new_qty;
+    return next;
+  end loop;
+end;
+$$;
+
+grant execute on function public.import_items(jsonb) to anon, authenticated;
+
+
+-- ---------------------------------------------------------
 -- 4. 접근 정책 (RLS)
 --
 --    이 앱은 로그인이 없다. 그래서 로그인하지 않은 방문자(anon)도

@@ -263,6 +263,33 @@ function changeQuantity(id, delta) {
 }
 
 /**
+ * F-04 엑셀 일괄 등록.
+ *
+ * rows 는 이미 검사를 마친 배열이어야 한다.
+ *   [{ name, category, quantity, owner }, ...]
+ *
+ * 같은 이름이 이미 있으면 수량을 더하고, 없으면 새로 넣는다.
+ * DB 함수 안에서 한 번의 트랜잭션으로 처리하므로,
+ * 중간에 실패하면 앞의 것까지 전부 취소된다 (반쯤 등록되는 일이 없다).
+ *
+ * 합산될 때 기존 카테고리와 등록자는 그대로 두고 수량만 바꾼다.
+ * +/− 버튼과 같은 방식이다.
+ */
+function importItems(rows) {
+  var problem = clientProblem();
+  if (problem) return Promise.reject(new Error(problem));
+
+  return getClient()
+    .rpc('import_items', { rows: rows })
+    .then(function (res) {
+      if (res.error) throw new Error(describeError(res.error));
+      return (res.data || []).map(function (r) {
+        return { action: r.result_action, name: r.result_name, quantity: r.result_quantity };
+      });
+    });
+}
+
+/**
  * F-03 물품 삭제. 되돌릴 수 없다 (PRD 5 F-03).
  */
 function deleteItem(id) {

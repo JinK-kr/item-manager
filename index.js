@@ -242,5 +242,8 @@
   /* ---------- 대시보드에서 돌아왔을 때 다시 읽기 ---------- */
   window.addEventListener('pageshow', refresh);
 
+  /* ---------- 엑셀 일괄 등록이 끝나면 목록을 다시 읽는다 (import.js) ---------- */
+  window.addEventListener('items-changed', refresh);
+
   refresh();
 })();
