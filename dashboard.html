@@ -17,7 +17,8 @@
       <a class="nav-link" href="index.html">&larr; 물품 목록으로</a>
     </header>
 
-    <div id="storage-warning"></div>
+    <div id="setup-warning"></div>
+    <div id="load-error"></div>
 
     <div class="dash-grid">
 
@@ -47,23 +48,10 @@
 
     </div>
 
-    <!-- 개발용 도구: 차트를 미리 보려고 만든 것. 실제 운영에서는 지워도 된다. -->
-    <section class="card tools">
-      <h2 class="card-title">테스트 도구</h2>
-      <div class="tools-row">
-        <button type="button" class="btn" id="btn-seed">테스트 물품 10개 넣기</button>
-        <button type="button" class="btn" id="btn-unseed">테스트 물품 지우기</button>
-      </div>
-      <p class="tools-msg" id="tools-msg" role="status" aria-live="polite"></p>
-      <p class="tools-note">
-        위젯이 어떻게 보이는지 확인하려고 만든 버튼이에요.
-        <strong>넣기</strong>는 지금 있는 물품을 그대로 두고 10개를 더합니다.
-        <strong>지우기</strong>는 이 버튼으로 넣은 물품만 골라서 지우고, 직접 등록한 물품은 건드리지 않아요.
-      </p>
-    </section>
-
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
   <script src="app.js"></script>
   <script src="dashboard.js"></script>
 </body>

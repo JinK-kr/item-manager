@@ -1,5 +1,6 @@
 /* =========================================================
    dashboard.js — 현황 대시보드 (위젯 4개)
+   Supabase 에서 물품을 한 번 읽어와 네 위젯을 모두 계산한다.
    ========================================================= */
 (function () {
   'use strict';
@@ -8,11 +9,9 @@
   var lowEl    = document.getElementById('w-low');
   var donutEl  = document.getElementById('w-donut');
   var recentEl = document.getElementById('w-recent');
-  var toolsMsg = document.getElementById('tools-msg');
-  var seedBtn  = document.getElementById('btn-seed');
-  var unseedBtn = document.getElementById('btn-unseed');
+  var errorEl  = document.getElementById('load-error');
 
-  renderStorageWarning(document.getElementById('storage-warning'));
+  var setupBroken = renderSetupWarning(document.getElementById('setup-warning'));
 
   /* =======================================================
      위젯 1. 총 품목 수
@@ -143,96 +142,44 @@
   }
 
   /* =======================================================
-     전체 다시 그리기
+     읽어와서 네 위젯을 모두 그린다
      ======================================================= */
-  function renderAll() {
-    var items = loadItems();
+
+  /** 위젯 네 칸에 같은 문구를 채운다 (불러오는 중 / 실패) */
+  function fillAll(html) {
+    totalEl.innerHTML = html;
+    lowEl.innerHTML = html;
+    donutEl.innerHTML = html;
+    recentEl.innerHTML = html;
+  }
+
+  function drawAll(items) {
     renderTotal(items);
     renderLowStock(items);
     renderDonut(items);
     renderRecent(items);
-    unseedBtn.disabled = (loadSeedIds().length === 0);
   }
 
-  /* =======================================================
-     테스트 도구 — 위젯을 미리 확인하려고 만든 것
-     ======================================================= */
+  function refresh() {
+    if (setupBroken) {
+      fillAll('<p class="empty">Supabase 설정을 마치면 현황이 보여요.</p>');
+      return Promise.resolve();
+    }
 
-  /* 카테고리 4개가 모두 나오고, 재고 부족과 재고 0 도 섞이도록 짠 자료다. */
-  var SEED_ITEMS = [
-    { name: '볼펜',       category: '문구류',   quantity: 24, owner: '민서', minutesAgo: 8 },
-    { name: 'A4 용지',    category: '문구류',   quantity: 12, owner: '지훈', minutesAgo: 25 },
-    { name: '포스트잇',   category: '문구류',   quantity: 2,  owner: '민서', minutesAgo: 47 },
-    { name: '가위',       category: '문구류',   quantity: 5,  owner: '예린', minutesAgo: 70 },
-    { name: '건전지 AA',  category: '전자기기', quantity: 3,  owner: '도윤', minutesAgo: 95 },
-    { name: '멀티탭',     category: '전자기기', quantity: 4,  owner: '지훈', minutesAgo: 130 },
-    { name: 'USB 케이블', category: '전자기기', quantity: 1,  owner: '예린', minutesAgo: 160 },
-    { name: '물티슈',     category: '청소용품', quantity: 8,  owner: '하은', minutesAgo: 200 },
-    { name: '쓰레기봉투', category: '청소용품', quantity: 0,  owner: '도윤', minutesAgo: 260 },
-    { name: '구급상자',   category: '기타',     quantity: 1,  owner: '하은', minutesAgo: 320 }
-  ];
+    errorEl.innerHTML = '';
+    fillAll('<p class="empty">불러오는 중…</p>');
 
-  function showToolsMsg(text) {
-    toolsMsg.textContent = text;
+    return fetchItems()
+      .then(drawAll)
+      .catch(function (err) {
+        errorEl.innerHTML =
+          '<div class="banner banner-error" role="alert">' + escapeHtml(err.message) + '</div>';
+        fillAll('<p class="empty state-error">불러오지 못했어요.</p>');
+      });
   }
 
-  seedBtn.addEventListener('click', function () {
-    var ask = '테스트용 물품 ' + SEED_ITEMS.length + '개를 넣을까요?\n' +
-              '지금 있는 물품은 그대로 두고 ' + SEED_ITEMS.length + '개를 더합니다.';
-    if (!window.confirm(ask)) return;
+  /* ---------- 목록 화면에서 돌아왔을 때 다시 읽기 ---------- */
+  window.addEventListener('pageshow', refresh);
 
-    var items = loadItems();
-    var seedIds = loadSeedIds();
-    var now = Date.now();
-
-    SEED_ITEMS.forEach(function (seed) {
-      var item = {
-        id: createId(),
-        name: seed.name,
-        category: seed.category,
-        quantity: seed.quantity,
-        owner: seed.owner,
-        updatedAt: new Date(now - seed.minutesAgo * 60000).toISOString()
-      };
-      items.push(item);
-      seedIds.push(item.id);
-    });
-
-    if (!saveItems(items)) {
-      showToolsMsg('저장에 실패했어요. 브라우저 저장 공간을 확인해 주세요.');
-      return;
-    }
-    saveSeedIds(seedIds);
-    renderAll();
-    showToolsMsg('테스트 물품 ' + SEED_ITEMS.length + '개를 넣었어요.');
-  });
-
-  unseedBtn.addEventListener('click', function () {
-    var seedIds = loadSeedIds();
-    if (seedIds.length === 0) {
-      showToolsMsg('지울 테스트 물품이 없어요.');
-      return;
-    }
-
-    var ask = '테스트로 넣은 물품 ' + seedIds.length + '개를 지울까요?\n' +
-              '직접 등록한 물품은 그대로 둡니다.';
-    if (!window.confirm(ask)) return;
-
-    var kept = loadItems().filter(function (it) {
-      return seedIds.indexOf(it.id) === -1;
-    });
-
-    saveItems(kept);
-    saveSeedIds([]);
-    renderAll();
-    showToolsMsg('테스트 물품 ' + seedIds.length + '개를 지웠어요.');
-  });
-
-  /* ---------- 다른 탭에서 바꾸거나, 목록 화면에서 돌아왔을 때 ---------- */
-  window.addEventListener('storage', function (ev) {
-    if (ev.key === STORAGE_KEY || ev.key === SEED_KEY || ev.key === null) renderAll();
-  });
-  window.addEventListener('pageshow', renderAll);
-
-  renderAll();
+  refresh();
 })();

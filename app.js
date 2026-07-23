@@ -1,18 +1,20 @@
 /* =========================================================
    app.js — 두 화면이 함께 쓰는 데이터 계층
-   저장소: 브라우저 localStorage
-   물품 하나 = { id, name, category, quantity, owner, updatedAt }
+   저장소: Supabase (PostgreSQL)
+
+   items 표 한 줄 = { id, name, category, quantity, owner, updated_at }
+   앱 안에서는 updatedAt 으로 이름만 바꿔 쓴다.
+
+   표를 만드는 SQL 은 supabase/schema.sql 에 있다.
    ========================================================= */
 
-/** localStorage 키 */
-var STORAGE_KEY = 'classInventory.items.v1';
-/** 테스트로 넣은 물품의 id 목록 (테스트 물품만 골라 지우기 위해 따로 보관) */
-var SEED_KEY = 'classInventory.seedIds.v1';
+/** 표 이름 */
+var TABLE = 'items';
 
 /** 재고 부족 기준: 이 값 이하면 '부족'으로 본다 (PRD 6.2) */
 var LOW_STOCK = 3;
 
-/** 물품 이름 / 닉네임 길이 제한 (PRD 4) */
+/** 물품 이름 / 닉네임 길이 제한 (PRD 4) — DB 쪽 check 제약과 같은 값 */
 var NAME_MAX = 30;
 var OWNER_MAX = 10;
 
@@ -20,6 +22,7 @@ var OWNER_MAX = 10;
  * 카테고리 고정 목록 (PRD 4).
  * slot 은 도넛 차트와 목록 점 색깔을 정하는 번호다.
  * 색은 '카테고리'에 붙어 있고 순위에 따라 바뀌지 않는다.
+ * 이 목록은 DB 의 category check 제약과 반드시 같아야 한다.
  */
 var CATEGORIES = [
   { name: '문구류',   slot: 1 },
@@ -29,92 +32,83 @@ var CATEGORIES = [
 ];
 
 /* ---------------------------------------------------------
-   저장소 읽고 쓰기
+   Supabase 연결
    --------------------------------------------------------- */
 
-/** localStorage 를 쓸 수 있는 상태인지 확인한다 (사생활 보호 모드 등에서 막힐 수 있다) */
-function storageAvailable() {
-  try {
-    var probe = '__probe__';
-    window.localStorage.setItem(probe, '1');
-    window.localStorage.removeItem(probe);
-    return true;
-  } catch (e) {
-    return false;
+var _client = null;
+
+/** 아직 설정을 안 채웠는지 검사 (기본 문구가 그대로 남아 있는지) */
+function configLooksEmpty(cfg) {
+  if (!cfg || !cfg.url || !cfg.anonKey) return true;
+  return cfg.url.indexOf('여기에') !== -1 || cfg.anonKey.indexOf('여기에') !== -1;
+}
+
+/**
+ * Supabase 클라이언트를 준비한다.
+ * 준비가 안 됐으면 null 을 주고, 이유는 clientProblem() 으로 알 수 있다.
+ */
+function getClient() {
+  if (_client) return _client;
+  if (!window.supabase || !window.supabase.createClient) return null;
+  if (configLooksEmpty(window.SUPABASE_CONFIG)) return null;
+
+  _client = window.supabase.createClient(
+    window.SUPABASE_CONFIG.url,
+    window.SUPABASE_CONFIG.anonKey
+  );
+  return _client;
+}
+
+/** 연결이 안 될 때 사람이 읽을 수 있는 이유. 문제가 없으면 null. */
+function clientProblem() {
+  if (!window.supabase || !window.supabase.createClient) {
+    return 'Supabase 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.';
   }
-}
-
-/** 물품 하나가 쓸 만한 모양인지 검사한다 (저장된 값이 깨졌을 때 걸러내려고) */
-function isValidItem(item) {
-  return item
-    && typeof item.id === 'string'
-    && typeof item.name === 'string'
-    && typeof item.owner === 'string'
-    && typeof item.category === 'string'
-    && typeof item.updatedAt === 'string'
-    && typeof item.quantity === 'number'
-    && isFinite(item.quantity)
-    && item.quantity >= 0;
-}
-
-/** 저장된 물품 전체를 배열로 읽는다. 값이 없거나 깨졌으면 빈 배열을 준다. */
-function loadItems() {
-  if (!storageAvailable()) return [];
-  try {
-    var raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    var parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isValidItem);
-  } catch (e) {
-    return [];
+  if (configLooksEmpty(window.SUPABASE_CONFIG)) {
+    return 'supabase-config.js 에 프로젝트 URL 과 anon 키를 아직 넣지 않았어요.';
   }
+  return null;
 }
 
-/** 물품 전체를 저장한다. 성공하면 true. */
-function saveItems(items) {
-  if (!storageAvailable()) return false;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    return true;
-  } catch (e) {
-    return false;
+/** 서버가 준 오류를 사람이 읽을 수 있는 문장으로 바꾼다 */
+function describeError(error) {
+  if (!error) return '알 수 없는 오류가 났어요.';
+  var code = error.code || '';
+  var msg = String(error.message || '');
+
+  if (code === '42P01' || code === 'PGRST205' || msg.indexOf('does not exist') !== -1) {
+    return 'items 표를 찾을 수 없어요. supabase/schema.sql 을 SQL Editor 에서 먼저 실행해 주세요.';
   }
-}
-
-/** 테스트로 넣은 물품 id 목록을 읽는다 */
-function loadSeedIds() {
-  if (!storageAvailable()) return [];
-  try {
-    var raw = window.localStorage.getItem(SEED_KEY);
-    var parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (e) {
-    return [];
+  if (code === '42501' || msg.indexOf('row-level security') !== -1) {
+    return '접근이 거부됐어요. items 표의 RLS 정책을 확인해 주세요.';
   }
+  if (code === 'PGRST301' || code === '401' || msg.indexOf('JWT') !== -1 || msg.indexOf('API key') !== -1) {
+    return 'anon 키가 맞지 않아요. supabase-config.js 를 확인해 주세요.';
+  }
+  if (code === '23514' || msg.indexOf('violates check constraint') !== -1) {
+    return '값이 규칙에 맞지 않아요. 이름·카테고리·수량을 다시 확인해 주세요.';
+  }
+  if (msg.indexOf('Failed to fetch') !== -1 || msg.indexOf('NetworkError') !== -1) {
+    return '서버에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.';
+  }
+  return msg || '알 수 없는 오류가 났어요.';
 }
 
-/** 테스트로 넣은 물품 id 목록을 저장한다 */
-function saveSeedIds(ids) {
-  if (!storageAvailable()) return;
-  try {
-    window.localStorage.setItem(SEED_KEY, JSON.stringify(ids));
-  } catch (e) { /* 저장 못 해도 앱은 계속 돈다 */ }
+/** DB 한 줄을 앱에서 쓰는 모양으로 바꾼다 */
+function fromRow(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    quantity: row.quantity,
+    owner: row.owner,
+    updatedAt: row.updated_at
+  };
 }
 
 /* ---------------------------------------------------------
    작은 도구들
    --------------------------------------------------------- */
-
-/** 겹치지 않는 id 를 만든다 */
-function createId() {
-  return 'it-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
-}
-
-/** 지금 시각을 저장용 문자열로 */
-function nowISO() {
-  return new Date().toISOString();
-}
 
 /** 저장된 시각을 '2026-07-23 18:40' 모양으로 바꾼다 (PRD 4) */
 function formatDateTime(iso) {
@@ -143,6 +137,14 @@ function categorySlot(name) {
   return 4;
 }
 
+/** 고정 목록에 있는 카테고리인지 확인 */
+function isKnownCategory(name) {
+  for (var i = 0; i < CATEGORIES.length; i++) {
+    if (CATEGORIES[i].name === name) return true;
+  }
+  return false;
+}
+
 /** 수정 시간 최신순으로 정렬한 새 배열을 준다 (PRD 6.1) */
 function sortByUpdatedDesc(items) {
   return items.slice().sort(function (a, b) {
@@ -160,15 +162,33 @@ function objectParticle(word) {
 }
 
 /* ---------------------------------------------------------
-   기능 세 가지 (PRD 5)
+   읽기
    --------------------------------------------------------- */
 
 /**
- * F-01 물품 등록.
- * 검사에 걸리면 { ok:false, field, message } 를 준다.
- * 같은 이름이 이미 있어도 그대로 등록한다 (PRD 5 F-01).
+ * 물품 전체를 수정 시간 최신순으로 읽는다.
+ * 실패하면 예외를 던진다.
  */
-function addItem(input) {
+function fetchItems() {
+  var problem = clientProblem();
+  if (problem) return Promise.reject(new Error(problem));
+
+  return getClient()
+    .from(TABLE)
+    .select('*')
+    .order('updated_at', { ascending: false })
+    .then(function (res) {
+      if (res.error) throw new Error(describeError(res.error));
+      return (res.data || []).map(fromRow);
+    });
+}
+
+/* ---------------------------------------------------------
+   기능 세 가지 (PRD 5)
+   --------------------------------------------------------- */
+
+/** 등록 전에 입력값을 검사한다. DB 의 check 제약과 같은 규칙. */
+function validateInput(input) {
   var name = String(input.name == null ? '' : input.name).trim();
   var owner = String(input.owner == null ? '' : input.owner).trim();
   var category = String(input.category == null ? '' : input.category);
@@ -180,7 +200,7 @@ function addItem(input) {
   if (name.length > NAME_MAX) {
     return { ok: false, field: 'name', message: '물품 이름은 ' + NAME_MAX + '자까지 쓸 수 있어요.' };
   }
-  if (categorySlotExists(category) === false) {
+  if (!isKnownCategory(category)) {
     return { ok: false, field: 'category', message: '카테고리를 골라 주세요.' };
   }
   if (!isFinite(quantity) || Math.floor(quantity) !== quantity || quantity < 0) {
@@ -193,86 +213,75 @@ function addItem(input) {
     return { ok: false, field: 'owner', message: '닉네임은 ' + OWNER_MAX + '자까지 쓸 수 있어요.' };
   }
 
-  var item = {
-    id: createId(),
-    name: name,
-    category: category,
-    quantity: quantity,
-    owner: owner,
-    updatedAt: nowISO()
+  return {
+    ok: true,
+    value: { name: name, category: category, quantity: quantity, owner: owner }
   };
-
-  var items = loadItems();
-  items.push(item);
-  if (!saveItems(items)) {
-    return { ok: false, field: null, message: '저장에 실패했어요. 브라우저 저장 공간을 확인해 주세요.' };
-  }
-  return { ok: true, item: item };
-}
-
-/** 고정 목록에 있는 카테고리인지 확인 */
-function categorySlotExists(name) {
-  for (var i = 0; i < CATEGORIES.length; i++) {
-    if (CATEGORIES[i].name === name) return true;
-  }
-  return false;
 }
 
 /**
- * F-02 수량 늘리기 / 줄이기.
- * delta 는 +1 또는 -1. 0 아래로는 내려가지 않는다 (PRD 5 F-02).
- * 바뀐 물품을 돌려준다. 바뀐 게 없으면 null.
+ * F-01 물품 등록.
+ * 검사에 걸리면 { ok:false, field, message } 를 준다.
+ * 같은 이름이 이미 있어도 그대로 등록한다 (PRD 5 F-01).
+ */
+function addItem(input) {
+  var checked = validateInput(input);
+  if (!checked.ok) return Promise.resolve(checked);
+
+  var problem = clientProblem();
+  if (problem) return Promise.resolve({ ok: false, field: null, message: problem });
+
+  return getClient()
+    .from(TABLE)
+    .insert(checked.value)
+    .select()
+    .single()
+    .then(function (res) {
+      if (res.error) return { ok: false, field: null, message: describeError(res.error) };
+      return { ok: true, item: fromRow(res.data) };
+    });
+}
+
+/**
+ * F-02 수량 늘리기 / 줄이기. delta 는 +1 또는 -1.
+ *
+ * DB 함수 change_quantity 를 부른다.
+ * 여기서 읽고-더하고-쓰기를 하면 두 사람이 동시에 누를 때 한 번이 사라진다.
+ * 0 미만으로 내려가지 않게 막는 것도 DB 안에서 한다 (PRD 5 F-02).
  */
 function changeQuantity(id, delta) {
-  var items = loadItems();
-  var changed = null;
+  var problem = clientProblem();
+  if (problem) return Promise.reject(new Error(problem));
 
-  for (var i = 0; i < items.length; i++) {
-    if (items[i].id !== id) continue;
-
-    var next = items[i].quantity + delta;
-    if (next < 0) return null;        // 0 미만은 막는다
-    if (next === items[i].quantity) return null;
-
-    items[i].quantity = next;
-    items[i].updatedAt = nowISO();    // 수량이 바뀌면 수정 시간도 갱신
-    changed = items[i];
-    break;
-  }
-
-  if (changed) saveItems(items);
-  return changed;
+  return getClient()
+    .rpc('change_quantity', { item_id: id, delta: delta })
+    .then(function (res) {
+      if (res.error) throw new Error(describeError(res.error));
+      var row = Array.isArray(res.data) ? res.data[0] : res.data;
+      return row ? fromRow(row) : null;
+    });
 }
 
 /**
  * F-03 물품 삭제. 되돌릴 수 없다 (PRD 5 F-03).
- * 지운 물품을 돌려준다. 없으면 null.
  */
 function deleteItem(id) {
-  var items = loadItems();
-  var removed = null;
-  var rest = [];
+  var problem = clientProblem();
+  if (problem) return Promise.reject(new Error(problem));
 
-  for (var i = 0; i < items.length; i++) {
-    if (items[i].id === id && !removed) removed = items[i];
-    else rest.push(items[i]);
-  }
-
-  if (!removed) return null;
-  saveItems(rest);
-
-  // 테스트 물품이었다면 표시도 같이 지운다
-  var seedIds = loadSeedIds();
-  var idx = seedIds.indexOf(id);
-  if (idx !== -1) {
-    seedIds.splice(idx, 1);
-    saveSeedIds(seedIds);
-  }
-  return removed;
+  return getClient()
+    .from(TABLE)
+    .delete()
+    .eq('id', id)
+    .then(function (res) {
+      if (res.error) throw new Error(describeError(res.error));
+      return true;
+    });
 }
 
 /* ---------------------------------------------------------
    대시보드 계산 (PRD 6.2)
+   읽어 온 배열만 가지고 계산한다 — 서버를 다시 부르지 않는다
    --------------------------------------------------------- */
 
 /** 위젯 1. 총 품목 수 = 물품 '종류' 개수. 수량 합계가 아니다. */
@@ -327,13 +336,17 @@ function toPercents(counts) {
 }
 
 /* ---------------------------------------------------------
-   저장소를 못 쓸 때 알리는 배너
+   설정이 안 됐을 때 알리는 배너
    --------------------------------------------------------- */
-function renderStorageWarning(container) {
-  if (!container || storageAvailable()) return;
+function renderSetupWarning(container) {
+  if (!container) return false;
+  var problem = clientProblem();
+  if (!problem) { container.innerHTML = ''; return false; }
+
   container.innerHTML =
     '<div class="banner banner-warn" role="alert">' +
-    '이 브라우저에서 저장 기능(localStorage)을 쓸 수 없어요. ' +
-    '입력한 내용이 새로고침하면 사라집니다. 사생활 보호 모드를 끄고 다시 열어 보세요.' +
+      '<strong>Supabase 설정이 아직 안 끝났어요.</strong><br>' +
+      escapeHtml(problem) +
     '</div>';
+  return true;
 }

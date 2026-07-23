@@ -1,5 +1,6 @@
 /* =========================================================
    index.js — 물품 등록과 목록 화면
+   데이터는 Supabase 에서 읽고 쓴다. 그래서 모두 비동기다.
    ========================================================= */
 (function () {
   'use strict';
@@ -12,11 +13,12 @@
   var catEl    = document.getElementById('f-category');
   var qtyEl    = document.getElementById('f-qty');
   var ownerEl  = document.getElementById('f-owner');
+  var submitEl = formEl.querySelector('button[type="submit"]');
 
   var FIELDS = { name: nameEl, category: catEl, quantity: qtyEl, owner: ownerEl };
   var msgTimer = null;
 
-  renderStorageWarning(document.getElementById('storage-warning'));
+  var setupBroken = renderSetupWarning(document.getElementById('setup-warning'));
 
   /* ---------- 카테고리 드롭다운 채우기 (PRD 4 고정 목록) ---------- */
   CATEGORIES.forEach(function (cat) {
@@ -75,8 +77,7 @@
       '</li>';
   }
 
-  function render() {
-    var items = sortByUpdatedDesc(loadItems());   // 수정 시간 최신순 (PRD 6.1)
+  function drawList(items) {
     countEl.textContent = '(' + items.length + '개)';
 
     if (items.length === 0) {
@@ -86,10 +87,32 @@
     listEl.innerHTML = items.map(itemHtml).join('');
   }
 
+  /** 서버에서 다시 읽어 목록을 그린다 */
+  function refresh() {
+    if (setupBroken) {
+      countEl.textContent = '';
+      listEl.innerHTML = '<li class="empty">Supabase 설정을 마치면 목록이 보여요.</li>';
+      return Promise.resolve();
+    }
+
+    listEl.setAttribute('aria-busy', 'true');
+    return fetchItems()
+      .then(function (items) {
+        drawList(items);              // 서버가 이미 최신순으로 정렬해 준다
+      })
+      .catch(function (err) {
+        countEl.textContent = '';
+        listEl.innerHTML = '<li class="empty state-error">' + escapeHtml(err.message) + '</li>';
+      })
+      .then(function () {
+        listEl.removeAttribute('aria-busy');
+      });
+  }
+
   /**
    * 수량만 바뀌었을 때는 그 줄만 고친다.
    * 곧바로 다시 정렬하면 누르던 줄이 화면 위로 튀어 올라가 다음 클릭을 놓친다.
-   * 정렬은 새로 그릴 때(등록·삭제·새로고침) 다시 맞춰진다.
+   * 정렬은 새로 읽을 때(등록·삭제·새로고침) 다시 맞춰진다.
    */
   function updateRow(li, item) {
     li.querySelector('.qty-num').textContent = item.quantity;
@@ -105,37 +128,61 @@
     if (html) main.insertAdjacentHTML('beforeend', html);
   }
 
+  /** 한 줄의 버튼을 잠그거나 푼다 (서버 응답을 기다리는 동안) */
+  function lockRow(li, locked) {
+    var btns = li.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) {
+      if (locked) {
+        btns[i].dataset.wasDisabled = btns[i].disabled ? '1' : '';
+        btns[i].disabled = true;
+      } else {
+        btns[i].disabled = (btns[i].dataset.wasDisabled === '1');
+      }
+    }
+    li.classList.toggle('is-busy', !!locked);
+  }
+
   /* ---------- F-01 등록 ---------- */
   formEl.addEventListener('submit', function (ev) {
     ev.preventDefault();
     clearInvalid();
 
     var rawQty = qtyEl.value.trim();
-    var result = addItem({
+    submitEl.disabled = true;
+    showMsg('등록하는 중…', '');
+
+    addItem({
       name: nameEl.value,
       category: catEl.value,
       quantity: rawQty === '' ? NaN : rawQty,   // 빈 칸을 0 으로 보지 않는다
       owner: ownerEl.value
-    });
+    })
+      .then(function (result) {
+        if (!result.ok) {
+          showMsg(result.message, 'error');
+          var field = FIELDS[result.field];
+          if (field) {
+            field.setAttribute('aria-invalid', 'true');
+            field.focus();
+          }
+          return;
+        }
 
-    if (!result.ok) {
-      showMsg(result.message, 'error');
-      var field = FIELDS[result.field];
-      if (field) {
-        field.setAttribute('aria-invalid', 'true');
-        field.focus();
-      }
-      return;
-    }
+        // 폼을 비우되 닉네임은 남긴다 — 같은 사람이 연달아 여러 개를 등록하는 일이 많다 (PRD 5 F-01)
+        nameEl.value = '';
+        qtyEl.value = '1';
+        catEl.selectedIndex = 0;
 
-    // 폼을 비우되 닉네임은 남긴다 — 같은 사람이 연달아 여러 개를 등록하는 일이 많다 (PRD 5 F-01)
-    nameEl.value = '';
-    qtyEl.value = '1';
-    catEl.selectedIndex = 0;
-
-    render();
-    showMsg(result.item.name + objectParticle(result.item.name) + ' 등록했어요.', 'ok');
-    nameEl.focus();
+        showMsg(result.item.name + objectParticle(result.item.name) + ' 등록했어요.', 'ok');
+        nameEl.focus();
+        return refresh();
+      })
+      .catch(function (err) {
+        showMsg(err.message, 'error');
+      })
+      .then(function () {
+        submitEl.disabled = false;
+      });
   });
 
   /* ---------- F-02 수량 조절 · F-03 삭제 ---------- */
@@ -150,8 +197,19 @@
     var act = btn.getAttribute('data-act');
 
     if (act === 'inc' || act === 'dec') {
-      var changed = changeQuantity(id, act === 'inc' ? 1 : -1);
-      if (changed) updateRow(li, changed);
+      lockRow(li, true);
+      changeQuantity(id, act === 'inc' ? 1 : -1)
+        .then(function (changed) {
+          if (changed) updateRow(li, changed);
+          else showMsg('그 물품을 찾을 수 없어요. 목록을 다시 읽을게요.', 'error');
+        })
+        .catch(function (err) {
+          showMsg(err.message, 'error');
+          return refresh();     // 서버와 어긋났을 수 있으니 다시 읽는다
+        })
+        .then(function () {
+          if (li.isConnected) lockRow(li, false);
+        });
       return;
     }
 
@@ -160,17 +218,21 @@
       var ask = name + objectParticle(name) + ' 삭제할까요?\n삭제하면 되돌릴 수 없어요.';
       if (!window.confirm(ask)) return;         // 취소하면 아무 일도 없다
 
-      deleteItem(id);
-      render();
-      showMsg(name + objectParticle(name) + ' 삭제했어요.', 'ok');
+      lockRow(li, true);
+      deleteItem(id)
+        .then(function () {
+          showMsg(name + objectParticle(name) + ' 삭제했어요.', 'ok');
+          return refresh();
+        })
+        .catch(function (err) {
+          showMsg(err.message, 'error');
+          if (li.isConnected) lockRow(li, false);
+        });
     }
   });
 
-  /* ---------- 다른 탭에서 바꾸거나, 대시보드에서 돌아왔을 때 ---------- */
-  window.addEventListener('storage', function (ev) {
-    if (ev.key === STORAGE_KEY || ev.key === null) render();
-  });
-  window.addEventListener('pageshow', render);
+  /* ---------- 대시보드에서 돌아왔을 때 다시 읽기 ---------- */
+  window.addEventListener('pageshow', refresh);
 
-  render();
+  refresh();
 })();

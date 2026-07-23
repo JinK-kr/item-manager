@@ -147,6 +147,11 @@ body {
   border: 1px solid var(--border);
 }
 .banner-warn { background: var(--badge-low-bg); color: var(--badge-low-text); }
+.banner-error { background: var(--badge-out-bg); color: var(--badge-out-text); }
+
+/* 서버 응답을 기다리는 동안 흐리게 */
+.item.is-busy { opacity: 0.5; }
+.state-error { color: var(--danger); }
 
 /* ---------- 등록 폼 ---------- */
 .form-grid {
@@ -377,15 +382,6 @@ input[aria-invalid="true"] { border-color: var(--danger); }
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
-
-/* ---------- 테스트 도구 ---------- */
-.tools {
-  border-style: dashed;
-  border-color: var(--gridline);
-}
-.tools-row { display: flex; gap: 10px; flex-wrap: wrap; }
-.tools-note { margin: 12px 0 0; font-size: 12.5px; color: var(--text-muted); }
-.tools-msg { margin-top: 10px; font-size: 13.5px; color: var(--text-secondary); min-height: 20px; }
 
 /* ---------- 좁은 화면 ---------- */
 @media (max-width: 760px) {
