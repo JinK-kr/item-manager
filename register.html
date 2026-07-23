@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>물품 등록 · (주)길동물산 물품 관리</title>
+  <!-- 그림 그리기 전에 밝기를 정한다. 안 그러면 화면이 한 번 번쩍인다. -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('classInventory.theme');
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css?v=4">
+</head>
+<body data-page="register">
+
+  <!-- 왼쪽 메뉴가 여기에 만들어진다 (sidebar.js) -->
+  <div id="sidebar-slot"></div>
+
+  <main class="content">
+    <div class="content-inner">
+
+      <header class="page-head">
+        <h1 class="page-title">물품 등록</h1>
+        <p class="page-sub">물품 하나를 등록해요. 여러 건이면 엑셀 업로드가 빠릅니다.</p>
+      </header>
+
+      <div id="setup-warning"></div>
+
+      <section class="card">
+        <h2 class="card-title">새 물품</h2>
+
+        <form id="add-form" class="form-grid" novalidate>
+          <div class="field field-name">
+            <label for="f-name">물품 이름</label>
+            <input type="text" id="f-name" maxlength="30" placeholder="예) 볼펜" autocomplete="off">
+          </div>
+
+          <div class="field field-category">
+            <label for="f-category">카테고리</label>
+            <select id="f-category"></select>
+          </div>
+
+          <div class="field field-qty">
+            <label for="f-qty">수량</label>
+            <input type="number" id="f-qty" min="0" step="1" value="1" inputmode="numeric">
+          </div>
+
+          <div class="field field-owner">
+            <label for="f-owner">등록자 닉네임</label>
+            <input type="text" id="f-owner" maxlength="10" placeholder="예) 민서" autocomplete="off">
+          </div>
+
+          <div class="field field-submit">
+            <button type="submit" class="btn btn-primary">등록</button>
+          </div>
+        </form>
+
+        <p id="form-msg" class="form-msg" role="status" aria-live="polite"></p>
+      </section>
+
+      <!-- 방금 등록한 것들 -->
+      <section class="card" id="recent-card" hidden>
+        <h2 class="card-title">방금 등록한 물품
+          <span class="count">이 화면에서 등록한 것만</span>
+        </h2>
+        <ul class="mini-list" id="recent-list"></ul>
+        <p class="recent-foot"><a href="items.html">전체 목록 보기 &rarr;</a></p>
+      </section>
+
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js?v=4"></script>
+  <script src="app.js?v=4"></script>
+  <script src="sidebar.js?v=4"></script>
+  <script src="register.js?v=4"></script>
+</body>
+</html>

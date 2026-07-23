@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>물품 목록 · (주)길동물산 물품 관리</title>
+  <!-- 그림 그리기 전에 밝기를 정한다. 안 그러면 화면이 한 번 번쩍인다. -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('classInventory.theme');
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css?v=4">
+</head>
+<body data-page="items">
+
+  <!-- 왼쪽 메뉴가 여기에 만들어진다 (sidebar.js) -->
+  <div id="sidebar-slot"></div>
+
+  <main class="content">
+    <div class="content-inner">
+
+      <header class="page-head page-head-row">
+        <div>
+          <h1 class="page-title">물품 목록</h1>
+          <p class="page-sub">수량을 바로 고치고, 필요 없어진 물품은 지워요.</p>
+        </div>
+        <a class="btn btn-primary" href="register.html">물품 등록</a>
+      </header>
+
+      <div id="setup-warning"></div>
+
+      <section class="card">
+        <!-- 검색 + 정렬 -->
+        <div class="toolbar">
+          <div class="search">
+            <svg class="search-icon" viewBox="0 0 16 16" aria-hidden="true">
+              <circle cx="7" cy="7" r="4.6"/><line x1="10.4" y1="10.4" x2="14" y2="14"/>
+            </svg>
+            <input type="search" id="q" autocomplete="off"
+                   placeholder="물품 이름, 카테고리, 등록자로 찾기"
+                   aria-label="물품 검색">
+            <button type="button" class="search-clear" id="q-clear" hidden aria-label="검색어 지우기">&times;</button>
+          </div>
+
+          <div class="sorts" role="group" aria-label="정렬 기준">
+            <button type="button" class="sort-btn" data-sort="updated">최신순</button>
+            <button type="button" class="sort-btn" data-sort="name">이름순</button>
+            <button type="button" class="sort-btn" data-sort="qty">수량순</button>
+          </div>
+        </div>
+
+        <p class="list-count" id="item-count" role="status" aria-live="polite"></p>
+        <ul class="item-list" id="item-list"></ul>
+      </section>
+
+      <p id="list-msg" class="form-msg" role="status" aria-live="polite"></p>
+
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js?v=4"></script>
+  <script src="app.js?v=4"></script>
+  <script src="sidebar.js?v=4"></script>
+  <script src="items.js?v=4"></script>
+</body>
+</html>

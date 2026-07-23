@@ -1,32 +1,45 @@
 /* =========================================================
-   index.js — 물품 등록과 목록 화면
-   데이터는 Supabase 에서 읽고 쓴다. 그래서 모두 비동기다.
+   items.js — 물품 목록 화면 (items.html)
+   목록 보여 주기 · 검색 · 정렬 · 수량 조절(F-02) · 삭제(F-03)
+   등록은 register.html 이 맡는다.
    ========================================================= */
 (function () {
   'use strict';
 
-  var listEl   = document.getElementById('item-list');
-  var countEl  = document.getElementById('item-count');
-  var formEl   = document.getElementById('add-form');
-  var msgEl    = document.getElementById('form-msg');
-  var nameEl   = document.getElementById('f-name');
-  var catEl    = document.getElementById('f-category');
-  var qtyEl    = document.getElementById('f-qty');
-  var ownerEl  = document.getElementById('f-owner');
-  var submitEl = formEl.querySelector('button[type="submit"]');
-
-  var FIELDS = { name: nameEl, category: catEl, quantity: qtyEl, owner: ownerEl };
-  var msgTimer = null;
+  var listEl  = document.getElementById('item-list');
+  var countEl = document.getElementById('item-count');
+  var msgEl   = document.getElementById('list-msg');
+  var qEl     = document.getElementById('q');
+  var qClear  = document.getElementById('q-clear');
+  var sortsEl = document.querySelector('.sorts');
 
   var setupBroken = renderSetupWarning(document.getElementById('setup-warning'));
 
-  /* ---------- 카테고리 드롭다운 채우기 (PRD 4 고정 목록) ---------- */
-  CATEGORIES.forEach(function (cat) {
-    var opt = document.createElement('option');
-    opt.value = cat.name;
-    opt.textContent = cat.name;
-    catEl.appendChild(opt);
-  });
+  /** 서버에서 읽어 온 전체 목록. 검색·정렬은 이걸 가지고 화면에서만 한다. */
+  var allItems = [];
+  var msgTimer = null;
+
+  /* ---------- 정렬 기준 ---------- */
+  /* cmp 는 늘 '오름차순' 기준으로 비교한다. 내림차순은 부호만 뒤집는다. */
+  var SORTS = {
+    updated: {
+      label: '최신순', dir: 'desc',
+      cmp: function (a, b) { return new Date(a.updatedAt) - new Date(b.updatedAt); },
+      say: { asc: '오래된 것부터', desc: '최근에 고친 것부터' }
+    },
+    name: {
+      label: '이름순', dir: 'asc',
+      cmp: function (a, b) { return a.name.localeCompare(b.name, 'ko'); },
+      say: { asc: 'ㄱ 부터', desc: 'ㅎ 부터' }
+    },
+    qty: {
+      label: '수량순', dir: 'asc',
+      cmp: function (a, b) { return a.quantity - b.quantity; },
+      say: { asc: '적은 것부터', desc: '많은 것부터' }
+    }
+  };
+
+  var sortKey = 'updated';   // 처음엔 최근에 고친 것부터
 
   /* ---------- 안내 문구 ---------- */
   function showMsg(text, kind) {
@@ -39,12 +52,6 @@
         msgEl.className = 'form-msg';
       }, 3000);
     }
-  }
-
-  function clearInvalid() {
-    Object.keys(FIELDS).forEach(function (key) {
-      FIELDS[key].removeAttribute('aria-invalid');
-    });
   }
 
   /* ---------- 목록 그리기 ---------- */
@@ -77,20 +84,70 @@
       '</li>';
   }
 
-  function drawList(items) {
-    countEl.textContent = '(' + items.length + '개)';
-
-    // 왼쪽 메뉴의 배지에 개수를 알려 준다 (sidebar.js)
-    window.dispatchEvent(new CustomEvent('items-loaded', { detail: { count: items.length } }));
-
-    if (items.length === 0) {
-      listEl.innerHTML = '<li class="empty">아직 등록된 물품이 없어요. 위에서 첫 물품을 등록해 보세요.</li>';
-      return;
-    }
-    listEl.innerHTML = items.map(itemHtml).join('');
+  /** 검색어에 걸리는지 — 이름·카테고리·등록자를 함께 본다 */
+  function matches(item, q) {
+    if (!q) return true;
+    return (item.name + ' ' + item.category + ' ' + item.owner).toLowerCase().indexOf(q) !== -1;
   }
 
-  /** 서버에서 다시 읽어 목록을 그린다 */
+  /** 검색 + 정렬해서 지금 보여 줄 목록을 만든다 */
+  function visibleItems() {
+    var q = qEl.value.trim().toLowerCase();
+    var rule = SORTS[sortKey];
+    var sign = rule.dir === 'asc' ? 1 : -1;
+
+    return allItems
+      .filter(function (it) { return matches(it, q); })
+      .sort(function (a, b) { return sign * rule.cmp(a, b); });
+  }
+
+  /** 정렬 버튼 모양 맞추기 */
+  function paintSorts() {
+    var btns = sortsEl.querySelectorAll('.sort-btn');
+    for (var i = 0; i < btns.length; i++) {
+      var key = btns[i].getAttribute('data-sort');
+      var rule = SORTS[key];
+      var on = key === sortKey;
+
+      btns[i].classList.toggle('is-on', on);
+      btns[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+      btns[i].innerHTML = rule.label +
+        (on ? ' <span class="sort-dir" aria-hidden="true">' +
+              (rule.dir === 'asc' ? '&uarr;' : '&darr;') + '</span>' : '');
+      btns[i].title = on
+        ? rule.say[rule.dir] + ' — 다시 누르면 반대로'
+        : rule.label + '으로 보기';
+    }
+  }
+
+  /** 검색·정렬을 적용해 화면을 다시 그린다 (서버를 다시 부르지 않는다) */
+  function paintList() {
+    var rows = visibleItems();
+    var q = qEl.value.trim();
+
+    qClear.hidden = (q === '');
+
+    if (allItems.length === 0) {
+      countEl.textContent = '';
+      listEl.innerHTML = '<li class="empty">아직 등록된 물품이 없어요. ' +
+        '<a href="register.html">물품 등록</a> 또는 ' +
+        '<a href="import.html">엑셀 업로드</a>로 시작해 보세요.</li>';
+      return;
+    }
+
+    countEl.textContent = q
+      ? '전체 ' + allItems.length + '개 중 ' + rows.length + '개'
+      : '전체 ' + allItems.length + '개';
+
+    if (rows.length === 0) {
+      // 조사(와/과)를 붙이면 어색해지는 말이 많아 아예 쓰지 않는다
+      listEl.innerHTML = '<li class="empty">‘' + escapeHtml(q) + '’ 검색 결과가 없어요.</li>';
+      return;
+    }
+    listEl.innerHTML = rows.map(itemHtml).join('');
+  }
+
+  /** 서버에서 다시 읽어 온다 */
   function refresh() {
     if (setupBroken) {
       countEl.textContent = '';
@@ -101,7 +158,9 @@
     listEl.setAttribute('aria-busy', 'true');
     return fetchItems()
       .then(function (items) {
-        drawList(items);              // 서버가 이미 최신순으로 정렬해 준다
+        allItems = items;
+        window.dispatchEvent(new CustomEvent('items-loaded', { detail: { count: items.length } }));
+        paintList();
       })
       .catch(function (err) {
         countEl.textContent = '';
@@ -115,7 +174,7 @@
   /**
    * 수량만 바뀌었을 때는 그 줄만 고친다.
    * 곧바로 다시 정렬하면 누르던 줄이 화면 위로 튀어 올라가 다음 클릭을 놓친다.
-   * 정렬은 새로 읽을 때(등록·삭제·새로고침) 다시 맞춰진다.
+   * 정렬은 새로 읽을 때(삭제·새로고침) 다시 맞춰진다.
    */
   function updateRow(li, item) {
     li.querySelector('.qty-num').textContent = item.quantity;
@@ -129,6 +188,11 @@
 
     var html = badgeHtml(item.quantity);
     if (html) main.insertAdjacentHTML('beforeend', html);
+
+    // 손에 들고 있는 목록도 같이 고쳐 둔다 (검색·정렬을 다시 할 때 쓰인다)
+    for (var i = 0; i < allItems.length; i++) {
+      if (allItems[i].id === item.id) { allItems[i] = item; break; }
+    }
   }
 
   /**
@@ -142,8 +206,7 @@
 
   /**
    * 한 줄의 버튼을 잠그거나 푼다 (서버 응답을 기다리는 동안).
-   *
-   * 풀 때는 '누르기 전 상태'로 되돌리면 안 된다.
+   * 풀 때는 '누르기 전 상태' 로 되돌리면 안 된다.
    * 그 사이에 수량이 바뀌었을 수 있어서, 지금 수량을 보고 다시 판단한다.
    */
   function lockRow(li, locked) {
@@ -153,47 +216,35 @@
     li.classList.toggle('is-busy', !!locked);
   }
 
-  /* ---------- F-01 등록 ---------- */
-  formEl.addEventListener('submit', function (ev) {
-    ev.preventDefault();
-    clearInvalid();
+  /* ---------- 검색 ---------- */
+  qEl.addEventListener('input', paintList);
+  qClear.addEventListener('click', function () {
+    qEl.value = '';
+    paintList();
+    qEl.focus();
+  });
+  qEl.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape' && qEl.value !== '') {
+      ev.stopPropagation();          // 사이드바가 닫히지 않게
+      qEl.value = '';
+      paintList();
+    }
+  });
 
-    var rawQty = qtyEl.value.trim();
-    submitEl.disabled = true;
-    showMsg('등록하는 중…', '');
+  /* ---------- 정렬 ---------- */
+  sortsEl.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('.sort-btn');
+    if (!btn) return;
 
-    addItem({
-      name: nameEl.value,
-      category: catEl.value,
-      quantity: rawQty === '' ? NaN : rawQty,   // 빈 칸을 0 으로 보지 않는다
-      owner: ownerEl.value
-    })
-      .then(function (result) {
-        if (!result.ok) {
-          showMsg(result.message, 'error');
-          var field = FIELDS[result.field];
-          if (field) {
-            field.setAttribute('aria-invalid', 'true');
-            field.focus();
-          }
-          return;
-        }
-
-        // 폼을 비우되 닉네임은 남긴다 — 같은 사람이 연달아 여러 개를 등록하는 일이 많다 (PRD 5 F-01)
-        nameEl.value = '';
-        qtyEl.value = '1';
-        catEl.selectedIndex = 0;
-
-        showMsg(result.item.name + objectParticle(result.item.name) + ' 등록했어요.', 'ok');
-        nameEl.focus();
-        return refresh();
-      })
-      .catch(function (err) {
-        showMsg(err.message, 'error');
-      })
-      .then(function () {
-        submitEl.disabled = false;
-      });
+    var key = btn.getAttribute('data-sort');
+    // 이미 켜진 버튼을 다시 누르면 방향만 뒤집는다
+    if (key === sortKey) {
+      SORTS[key].dir = (SORTS[key].dir === 'asc') ? 'desc' : 'asc';
+    } else {
+      sortKey = key;
+    }
+    paintSorts();
+    paintList();
   });
 
   /* ---------- F-02 수량 조절 · F-03 삭제 ---------- */
@@ -242,11 +293,9 @@
     }
   });
 
-  /* ---------- 대시보드에서 돌아왔을 때 다시 읽기 ---------- */
+  /* ---------- 다른 화면에서 돌아왔을 때 다시 읽기 ---------- */
   window.addEventListener('pageshow', refresh);
 
-  /* ---------- 엑셀 일괄 등록이 끝나면 목록을 다시 읽는다 (import.js) ---------- */
-  window.addEventListener('items-changed', refresh);
-
+  paintSorts();
   refresh();
 })();

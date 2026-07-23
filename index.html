@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>물품 목록 · 우리 반 물품 관리</title>
+  <title>현황 대시보드 · (주)길동물산 물품 관리</title>
   <!-- 그림 그리기 전에 밝기를 정한다. 안 그러면 화면이 한 번 번쩍인다. -->
   <script>
     (function () {
@@ -13,9 +13,9 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=4">
 </head>
-<body data-page="list">
+<body data-page="dashboard">
 
   <!-- 왼쪽 메뉴가 여기에 만들어진다 (sidebar.js) -->
   <div id="sidebar-slot"></div>
@@ -24,58 +24,48 @@
     <div class="content-inner">
 
       <header class="page-head">
-        <h1 class="page-title">물품 목록</h1>
-        <p class="page-sub">공용 물품을 등록하고 수량을 관리해요.</p>
+        <h1 class="page-title">현황 대시보드</h1>
+        <p class="page-sub">지금 물품이 어떤 상태인지 한눈에 봐요.</p>
       </header>
 
       <div id="setup-warning"></div>
+      <div id="load-error"></div>
 
-      <!-- F-01 물품 등록 -->
-      <section class="card">
-        <h2 class="card-title">물품 등록</h2>
+      <div class="dash-grid">
 
-        <form id="add-form" class="form-grid" novalidate>
-          <div class="field field-name">
-            <label for="f-name">물품 이름</label>
-            <input type="text" id="f-name" maxlength="30" placeholder="예) 볼펜" autocomplete="off">
-          </div>
+        <!-- 위젯 1. 총 품목 수 -->
+        <section class="card">
+          <h2 class="card-title">총 품목 수</h2>
+          <div id="w-total"></div>
+        </section>
 
-          <div class="field field-category">
-            <label for="f-category">카테고리</label>
-            <select id="f-category"></select>
-          </div>
+        <!-- 위젯 2. 재고 부족 목록 (수량 3개 이하) -->
+        <section class="card">
+          <h2 class="card-title">재고 부족 <span class="count">수량 3개 이하</span></h2>
+          <div id="w-low"></div>
+        </section>
 
-          <div class="field field-qty">
-            <label for="f-qty">수량</label>
-            <input type="number" id="f-qty" min="0" step="1" value="1" inputmode="numeric">
-          </div>
+        <!-- 위젯 3. 카테고리별 분포 -->
+        <section class="card">
+          <h2 class="card-title">카테고리별 분포 <span class="count">품목 수 기준</span></h2>
+          <div id="w-donut"></div>
+        </section>
 
-          <div class="field field-owner">
-            <label for="f-owner">등록자 닉네임</label>
-            <input type="text" id="f-owner" maxlength="10" placeholder="예) 민서" autocomplete="off">
-          </div>
+        <!-- 위젯 4. 최근 변경 내역 -->
+        <section class="card">
+          <h2 class="card-title">최근 변경 내역 <span class="count">최근 5건</span></h2>
+          <div id="w-recent"></div>
+        </section>
 
-          <div class="field field-submit">
-            <button type="submit" class="btn btn-primary">등록</button>
-          </div>
-        </form>
-
-        <p id="form-msg" class="form-msg" role="status" aria-live="polite"></p>
-      </section>
-
-      <!-- 물품 목록 (F-02 수량 조절 · F-03 삭제) -->
-      <section class="card">
-        <h2 class="card-title">등록된 물품 <span class="count" id="item-count"></span></h2>
-        <ul class="item-list" id="item-list"></ul>
-      </section>
+      </div>
 
     </div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js?v=3"></script>
-  <script src="app.js?v=3"></script>
-  <script src="sidebar.js?v=3"></script>
-  <script src="index.js?v=3"></script>
+  <script src="supabase-config.js?v=4"></script>
+  <script src="app.js?v=4"></script>
+  <script src="sidebar.js?v=4"></script>
+  <script src="dashboard.js?v=4"></script>
 </body>
 </html>

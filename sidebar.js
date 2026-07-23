@@ -1,10 +1,10 @@
 /* =========================================================
-   sidebar.js — 세 화면이 함께 쓰는 왼쪽 메뉴
+   sidebar.js — 네 화면이 함께 쓰는 왼쪽 메뉴
 
    메뉴 HTML 을 여기서 한 번만 만든다.
    여러 페이지에 같은 내용을 적어 두면 한쪽만 고치는 실수가 생긴다.
 
-   쓰는 법:  <body data-page="list | dashboard | import">
+   쓰는 법:  <body data-page="dashboard | items | register | import">
              <div id="sidebar-slot"></div>
    ========================================================= */
 (function () {
@@ -17,15 +17,18 @@
 
   /* ---------- 아이콘 (외부 파일 없이 직접 그린다) ---------- */
   var ICON = {
+    chart:
+      '<svg viewBox="0 0 16 16" aria-hidden="true">' +
+        '<circle cx="8" cy="8" r="5.6"/><path d="M8 2.4 A5.6 5.6 0 0 1 13.6 8 L8 8 Z" fill="currentColor" stroke="none"/>' +
+        '</svg>',
     list:
       '<svg viewBox="0 0 16 16" aria-hidden="true">' +
         '<circle cx="3" cy="4" r="1.1"/><circle cx="3" cy="8" r="1.1"/><circle cx="3" cy="12" r="1.1"/>' +
         '<line x1="6.5" y1="4" x2="14" y2="4"/><line x1="6.5" y1="8" x2="14" y2="8"/>' +
         '<line x1="6.5" y1="12" x2="14" y2="12"/></svg>',
-    chart:
+    plus:
       '<svg viewBox="0 0 16 16" aria-hidden="true">' +
-        '<circle cx="8" cy="8" r="5.6"/><path d="M8 2.4 A5.6 5.6 0 0 1 13.6 8 L8 8 Z" fill="currentColor" stroke="none"/>' +
-        '</svg>',
+        '<line x1="8" y1="3" x2="8" y2="13"/><line x1="3" y1="8" x2="13" y2="8"/></svg>',
     upload:
       '<svg viewBox="0 0 16 16" aria-hidden="true">' +
         '<path d="M8 10.5 V2.6"/><path d="M4.8 5.6 L8 2.4 L11.2 5.6"/>' +
@@ -60,16 +63,18 @@
 
     '<aside class="sidebar" id="sidebar">' +
       '<a class="brand" href="index.html">' +
-        '<span class="brand-mark">물품</span>' +
-        '<span class="brand-name">우리 반<br>물품 관리</span>' +
+        '<span class="brand-mark">길동</span>' +
+        '<span class="brand-name">(주)길동물산<br><small>물품 관리</small></span>' +
       '</a>' +
 
       '<nav class="nav" aria-label="주요 메뉴">' +
         '<p class="nav-group">관리</p>' +
-        itemHtml({ label: '물품 목록', icon: 'list', href: 'index.html',
-                   page: 'list', badgeId: 'nav-count' }) +
-        itemHtml({ label: '현황 대시보드', icon: 'chart', href: 'dashboard.html',
+        itemHtml({ label: '현황 대시보드', icon: 'chart', href: 'index.html',
                    page: 'dashboard' }) +
+        itemHtml({ label: '물품 목록', icon: 'list', href: 'items.html',
+                   page: 'items', badgeId: 'nav-count' }) +
+        itemHtml({ label: '물품 등록', icon: 'plus', href: 'register.html',
+                   page: 'register' }) +
 
         '<p class="nav-group">데이터</p>' +
         itemHtml({ label: '엑셀 업로드', icon: 'upload', href: 'import.html',
@@ -117,7 +122,7 @@
   });
 
   /* ---------- 물품 개수 배지 ---------- */
-  // 목록을 읽은 화면이 개수를 알려 준다 (index.js · dashboard.js)
+  // 목록을 읽은 화면이 개수를 알려 준다
   window.addEventListener('items-loaded', function (ev) {
     var badge = document.getElementById('nav-count');
     if (!badge) return;
