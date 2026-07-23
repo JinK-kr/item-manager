@@ -116,7 +116,7 @@
    */
   function updateRow(li, item) {
     li.querySelector('.qty-num').textContent = item.quantity;
-    li.querySelector('[data-act="dec"]').disabled = (item.quantity === 0);
+    syncDecButton(li);
     li.querySelector('.item-meta').textContent =
       item.owner + ' · ' + formatDateTime(item.updatedAt);
 
@@ -128,17 +128,25 @@
     if (html) main.insertAdjacentHTML('beforeend', html);
   }
 
-  /** 한 줄의 버튼을 잠그거나 푼다 (서버 응답을 기다리는 동안) */
+  /**
+   * '−' 버튼은 수량이 0일 때만 잠근다.
+   * 잠금 상태를 판단하는 곳을 여기 한 군데로 모아 둔다.
+   */
+  function syncDecButton(li) {
+    var qty = Number(li.querySelector('.qty-num').textContent);
+    li.querySelector('[data-act="dec"]').disabled = (qty === 0);
+  }
+
+  /**
+   * 한 줄의 버튼을 잠그거나 푼다 (서버 응답을 기다리는 동안).
+   *
+   * 풀 때는 '누르기 전 상태'로 되돌리면 안 된다.
+   * 그 사이에 수량이 바뀌었을 수 있어서, 지금 수량을 보고 다시 판단한다.
+   */
   function lockRow(li, locked) {
     var btns = li.querySelectorAll('button');
-    for (var i = 0; i < btns.length; i++) {
-      if (locked) {
-        btns[i].dataset.wasDisabled = btns[i].disabled ? '1' : '';
-        btns[i].disabled = true;
-      } else {
-        btns[i].disabled = (btns[i].dataset.wasDisabled === '1');
-      }
-    }
+    for (var i = 0; i < btns.length; i++) btns[i].disabled = !!locked;
+    if (!locked) syncDecButton(li);
     li.classList.toggle('is-busy', !!locked);
   }
 

@@ -39,8 +39,8 @@ var _client = null;
 
 /** 아직 설정을 안 채웠는지 검사 (기본 문구가 그대로 남아 있는지) */
 function configLooksEmpty(cfg) {
-  if (!cfg || !cfg.url || !cfg.anonKey) return true;
-  return cfg.url.indexOf('여기에') !== -1 || cfg.anonKey.indexOf('여기에') !== -1;
+  if (!cfg || !cfg.url || !cfg.publicKey) return true;
+  return cfg.url.indexOf('여기에') !== -1 || cfg.publicKey.indexOf('여기에') !== -1;
 }
 
 /**
@@ -54,7 +54,7 @@ function getClient() {
 
   _client = window.supabase.createClient(
     window.SUPABASE_CONFIG.url,
-    window.SUPABASE_CONFIG.anonKey
+    window.SUPABASE_CONFIG.publicKey
   );
   return _client;
 }
@@ -65,7 +65,7 @@ function clientProblem() {
     return 'Supabase 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.';
   }
   if (configLooksEmpty(window.SUPABASE_CONFIG)) {
-    return 'supabase-config.js 에 프로젝트 URL 과 anon 키를 아직 넣지 않았어요.';
+    return 'supabase-config.js 에 프로젝트 URL 과 publishable 키를 아직 넣지 않았어요.';
   }
   return null;
 }
@@ -83,7 +83,7 @@ function describeError(error) {
     return '접근이 거부됐어요. items 표의 RLS 정책을 확인해 주세요.';
   }
   if (code === 'PGRST301' || code === '401' || msg.indexOf('JWT') !== -1 || msg.indexOf('API key') !== -1) {
-    return 'anon 키가 맞지 않아요. supabase-config.js 를 확인해 주세요.';
+    return 'publishable 키가 맞지 않아요. supabase-config.js 를 확인해 주세요.';
   }
   if (code === '23514' || msg.indexOf('violates check constraint') !== -1) {
     return '값이 규칙에 맞지 않아요. 이름·카테고리·수량을 다시 확인해 주세요.';

@@ -51,7 +51,7 @@ Supabase 대시보드 → **Project Settings** → **API** 에서 두 값을 복
 | 복사할 값 | 넣을 곳 |
 |---|---|
 | Project URL | `url` |
-| `anon` `public` 키 | `anonKey` |
+| Publishable key (`sb_publishable_...`) | `publicKey` |
 
 `service_role` 키는 절대 넣으면 안 됩니다. 그 키는 모든 정책을 무시합니다.
 
@@ -81,7 +81,7 @@ python -m http.server 8765
 index.html / index.js          등록·목록 화면
 dashboard.html / dashboard.js  대시보드 화면
 app.js                         두 화면이 공유하는 데이터 계층 (Supabase)
-supabase-config.js             내 프로젝트 주소와 anon 키
+supabase-config.js             내 프로젝트 주소와 publishable 키
 supabase/schema.sql            표·트리거·함수·정책을 만드는 SQL
 style.css                      공용 스타일 (라이트/다크 자동 전환)
 PRD.md                         제품 요구사항 문서

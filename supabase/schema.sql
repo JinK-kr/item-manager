@@ -49,6 +49,7 @@ comment on table public.items is '동아리·실습실 공용 물품 목록';
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
+set search_path = ''      -- 함수 안에서 이름을 가로채지 못하게 막는다
 as $$
 begin
   new.updated_at = now();
@@ -73,6 +74,7 @@ create trigger items_set_updated_at
 create or replace function public.change_quantity(item_id uuid, delta integer)
 returns public.items
 language sql
+set search_path = ''      -- 함수 안에서 이름을 가로채지 못하게 막는다
 as $$
   update public.items
      set quantity = greatest(quantity + delta, 0)
@@ -89,7 +91,7 @@ grant execute on function public.change_quantity(uuid, integer) to anon, authent
 --    이 앱은 로그인이 없다. 그래서 로그인하지 않은 방문자(anon)도
 --    읽기·추가·수정·삭제를 모두 할 수 있게 연다.
 --
---    ⚠ 주의: 주소와 anon 키를 아는 사람은 누구나 이 표의 내용을
+--    ⚠ 주의: 주소와 publishable 키를 아는 사람은 누구나 이 표의 내용을
 --       읽고, 고치고, 전부 지울 수 있습니다. 공개 저장소에 키가
 --       올라가면 인터넷의 누구나 해당됩니다. 감수하고 쓰는 설정입니다.
 -- ---------------------------------------------------------
