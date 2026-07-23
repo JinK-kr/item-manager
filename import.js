@@ -58,12 +58,31 @@
     name:     ['물품이름', '물품명', '이름', '품명', 'name', 'item'],
     category: ['카테고리', '분류', 'category'],
     quantity: ['수량', '개수', 'quantity', 'qty'],
-    owner:    ['등록자', '등록자닉네임', '닉네임', 'owner', 'nickname']
+    owner:    ['등록자', '등록자닉네임', '닉네임', 'owner', 'nickname'],
+    received: ['입고일', '입고날짜', '입고', 'date', 'receivedat'],
+    target:   ['적정재고량', '적정재고', '적정', 'target', 'targetquantity']
   };
 
   /** 공백을 없애고 소문자로 바꿔서 비교한다 ('물품 이름' 과 '물품이름' 을 같게 본다) */
   function normalize(text) {
     return String(text == null ? '' : text).replace(/\s+/g, '').toLowerCase();
+  }
+
+  /**
+   * 엑셀의 날짜 칸을 YYYY-MM-DD 로 바꾼다.
+   * 엑셀에서 날짜 서식으로 넣으면 '1900-01-01 부터 며칠' 이라는 숫자로 들어온다.
+   * 글자로 적었으면 그대로 쓴다.
+   */
+  function excelDate(value) {
+    if (value === null || value === undefined || value === '') return '';
+    if (typeof value === 'number' && window.XLSX && XLSX.SSF) {
+      var d = XLSX.SSF.parse_date_code(value);
+      if (d) {
+        var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+        return d.y + '-' + pad(d.m) + '-' + pad(d.d);
+      }
+    }
+    return String(value).trim().slice(0, 10);
   }
 
   /** 헤더 한 칸이 어떤 항목인지 찾는다. 모르는 헤더는 null. */
@@ -94,14 +113,15 @@
     ensureXLSX()
       .then(function (XLSX) {
         var aoa = [
-          ['물품이름', '카테고리', '수량', '등록자'],
-          ['볼펜',       '문구류',   24, '민서'],
-          ['건전지 AA',  '전자기기',  3, '도윤'],
-          ['물티슈',     '청소용품',  8, '하은'],
-          ['구급상자',   '기타',      1, '예린']
+          ['물품이름', '카테고리', '수량', '등록자', '입고일', '적정재고량'],
+          ['볼펜',       '문구류',   24, '민서', todayISO(), 20],
+          ['건전지 AA',  '전자기기',  3, '도윤', todayISO(), 10],
+          ['물티슈',     '청소용품',  8, '하은', todayISO(), 10],
+          ['구급상자',   '기타',      1, '예린', todayISO(),  1]
         ];
         var ws = XLSX.utils.aoa_to_sheet(aoa);
-        ws['!cols'] = [{ wch: 18 }, { wch: 12 }, { wch: 8 }, { wch: 12 }];
+        ws['!cols'] = [{ wch: 18 }, { wch: 12 }, { wch: 8 }, { wch: 12 },
+                       { wch: 12 }, { wch: 12 }];
         var wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, '물품목록');
         XLSX.writeFile(wb, '물품등록_양식.xlsx');
@@ -233,7 +253,9 @@
         name:     row[colOf.name],
         category: row[colOf.category],
         quantity: row[colOf.quantity],
-        owner:    colOf.owner !== undefined ? row[colOf.owner] : ''
+        owner:    colOf.owner !== undefined ? row[colOf.owner] : '',
+        received: colOf.received !== undefined ? row[colOf.received] : '',
+        target:   colOf.target !== undefined ? row[colOf.target] : ''
       };
 
       // 완전히 빈 줄은 조용히 넘어간다
@@ -248,7 +270,9 @@
         name: raw.name,
         category: String(raw.category == null ? '' : raw.category).trim(),
         quantity: String(raw.quantity).trim() === '' ? NaN : raw.quantity,
-        owner: owner
+        owner: owner,
+        receivedAt: excelDate(raw.received),
+        targetQuantity: raw.target
       });
 
       if (!checked.ok) {
@@ -312,7 +336,7 @@
       '<div class="xls-table-wrap"><table class="xls-table">' +
         '<thead><tr>' +
           '<th>상태</th><th>물품 이름</th><th>카테고리</th>' +
-          '<th class="num">수량</th><th>등록자</th>' +
+          '<th class="num">수량</th><th>등록자</th><th>입고일</th><th class="num">적정</th>' +
         '</tr></thead><tbody>' +
         marked.map(function (m) {
           var qty = m.action === '합산'
@@ -325,6 +349,8 @@
               '<td>' + escapeHtml(m.row.category) + '</td>' +
               '<td class="num">' + qty + '</td>' +
               '<td>' + escapeHtml(m.row.owner) + '</td>' +
+              '<td>' + escapeHtml(m.row.received_at) + '</td>' +
+              '<td class="num">' + m.row.target_quantity + '</td>' +
             '</tr>';
         }).join('') +
       '</tbody></table></div>';

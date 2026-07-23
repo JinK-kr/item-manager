@@ -13,19 +13,28 @@
   var nameEl   = document.getElementById('f-name');
   var catEl    = document.getElementById('f-category');
   var qtyEl    = document.getElementById('f-qty');
+  var targetEl = document.getElementById('f-target');
+  var recvEl   = document.getElementById('f-received');
   var ownerEl  = document.getElementById('f-owner');
   var submitEl = formEl.querySelector('button[type="submit"]');
 
   var recentCard = document.getElementById('recent-card');
   var recentList = document.getElementById('recent-list');
 
-  var FIELDS = { name: nameEl, category: catEl, quantity: qtyEl, owner: ownerEl };
+  var FIELDS = {
+    name: nameEl, category: catEl, quantity: qtyEl,
+    targetQuantity: targetEl, receivedAt: recvEl, owner: ownerEl
+  };
   var msgTimer = null;
 
   /** 이 화면에서 방금 등록한 것들 (새로고침하면 사라진다) */
   var justAdded = [];
 
   renderSetupWarning(document.getElementById('setup-warning'));
+
+  // 입고일은 오늘로 시작하고, 미래는 고를 수 없게 한다
+  recvEl.value = todayISO();
+  recvEl.max = todayISO();
 
   /* ---------- 카테고리 드롭다운 채우기 (PRD 4 고정 목록) ---------- */
   CATEGORIES.forEach(function (cat) {
@@ -66,7 +75,7 @@
             escapeHtml(it.name) +
           '</span>' +
           '<span class="mini-qty">' + it.quantity + '개</span>' +
-          '<span class="mini-side">' + formatDateTime(it.updatedAt) + '</span>' +
+          '<span class="mini-side">입고 ' + escapeHtml(it.receivedAt || todayISO()) + '</span>' +
         '</li>';
     }).join('');
   }
@@ -84,6 +93,8 @@
       name: nameEl.value,
       category: catEl.value,
       quantity: rawQty === '' ? NaN : rawQty,   // 빈 칸을 0 으로 보지 않는다
+      targetQuantity: targetEl.value,
+      receivedAt: recvEl.value,
       owner: ownerEl.value
     })
       .then(function (result) {
@@ -101,6 +112,7 @@
         nameEl.value = '';
         qtyEl.value = '1';
         catEl.selectedIndex = 0;
+        // 적정 재고량과 입고일은 그대로 둔다 — 연달아 넣을 때 대개 같은 값이다
 
         justAdded.unshift(result.item);
         paintRecent();
@@ -127,11 +139,46 @@
   var chatOwner   = document.getElementById('chat-owner');
   var chatText    = document.getElementById('chat-text');
   var chatGo      = document.getElementById('chat-go');
+  var chatModel   = document.getElementById('chat-model');
   var chatMsg     = document.getElementById('chat-msg');
   var chatPreview = document.getElementById('chat-preview');
 
+  var MODEL_KEY = 'gildong.model';
+
+  /**
+   * 고를 수 있는 모델을 채운다.
+   * 목록은 Edge Function 이 오픈라우터 가격을 직접 확인해서 무료인 것만 골라 준다.
+   * 그래서 여기 뜨는 건 전부 0원이 보장된다.
+   */
+  listFreeModels()
+    .then(function (models) {
+      if (!models.length) {
+        chatModel.innerHTML = '<option value="">쓸 수 있는 모델이 없어요</option>';
+        return;
+      }
+      var saved = '';
+      try { saved = localStorage.getItem(MODEL_KEY) || ''; } catch (e) {}
+
+      chatModel.innerHTML = models.map(function (m, i) {
+        var short = m.id.split('/').pop().replace(':free', '');
+        var mark = m.structured ? ' · 형식 안정적' : '';
+        var on = (saved ? m.id === saved : i === 0);
+        return '<option value="' + escapeHtml(m.id) + '"' + (on ? ' selected' : '') + '>' +
+               escapeHtml(short) + mark + '</option>';
+      }).join('');
+    })
+    .catch(function () {
+      chatModel.innerHTML = '<option value="">목록을 못 불러왔어요 (기본 모델로 진행)</option>';
+    });
+
+  chatModel.addEventListener('change', function () {
+    try { localStorage.setItem(MODEL_KEY, chatModel.value); } catch (e) {}
+  });
+
   /** 미리보기에서 확인을 기다리는 줄들 */
   var chatPending = null;
+  /** 실제로 답을 준 모델 (고른 것이 막히면 예비로 넘어간다) */
+  var usedModel = '';
 
   // 닉네임 칸은 둘이지만 값은 하나로 맞춰 둔다 (어느 쪽에 적든 통한다)
   chatOwner.addEventListener('input', function () { ownerEl.value = chatOwner.value; });
@@ -174,8 +221,10 @@
     setChatBusy(true, '읽는 중…');
     showChatMsg('문장을 읽고 있어요…', '');
 
-    parseItemsFromText(text, owner)
-      .then(function (candidates) {
+    parseItemsFromText(text, owner, chatModel.value)
+      .then(function (res) {
+        var candidates = res.items;
+        usedModel = res.model;
         if (!candidates.length) {
           showChatMsg('등록할 물품을 찾지 못했어요. ' +
                       '<strong>볼펜 20개</strong> 처럼 이름과 개수를 적어 주세요.', 'error');
@@ -267,6 +316,7 @@
           '<td>' + select + '</td>' +
           '<td class="num">' + qty + '</td>' +
           '<td>' + escapeHtml(m.row.owner) + '</td>' +
+          '<td>' + escapeHtml(m.row.received_at) + '</td>' +
         '</tr>';
     }).join('');
 
@@ -282,10 +332,12 @@
         '새로 추가 ' + newCount + '건, 수량 합산 ' + mergeCount + '건' +
         (skipped.length ? ', <span class="xls-skip-count">건너뜀 ' + skipped.length + '건</span>' : '') +
       '</p>' +
-      '<p class="cat-note">카테고리는 <strong>모델이 추측한 값</strong>이에요. 틀렸으면 바꿔 주세요.</p>' +
+      '<p class="cat-note">카테고리는 <strong>모델이 추측한 값</strong>이에요. 틀렸으면 바꿔 주세요.' +
+        (usedModel ? ' <span class="used-model">' + escapeHtml(usedModel.split('/').pop()) + ' 가 읽었어요</span>' : '') +
+      '</p>' +
       '<div class="xls-table-wrap"><table class="xls-table">' +
         '<thead><tr><th>상태</th><th>물품 이름</th><th>카테고리</th>' +
-        '<th class="num">수량</th><th>등록자</th></tr></thead>' +
+        '<th class="num">수량</th><th>등록자</th><th>입고일</th></tr></thead>' +
         '<tbody>' + rowsHtml + '</tbody></table></div>' +
       skippedHtml +
       '<div class="xls-actions">' +

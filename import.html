@@ -13,7 +13,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body data-page="import">
 
@@ -91,12 +91,12 @@
         <div class="xls-table-wrap">
           <table class="xls-table sample-table">
             <thead>
-              <tr><th>물품이름</th><th>카테고리</th><th class="num">수량</th><th>등록자</th></tr>
+              <tr><th>물품이름</th><th>카테고리</th><th class="num">수량</th><th>등록자</th><th>입고일</th><th class="num">적정재고량</th></tr>
             </thead>
             <tbody>
-              <tr><td>볼펜</td><td>문구류</td><td class="num">24</td><td>민서</td></tr>
-              <tr><td>건전지 AA</td><td>전자기기</td><td class="num">3</td><td>도윤</td></tr>
-              <tr><td>물티슈</td><td>청소용품</td><td class="num">8</td><td>하은</td></tr>
+              <tr><td>볼펜</td><td>문구류</td><td class="num">24</td><td>민서</td><td>2026-07-23</td><td class="num">20</td></tr>
+              <tr><td>건전지 AA</td><td>전자기기</td><td class="num">3</td><td>도윤</td><td>2026-07-23</td><td class="num">10</td></tr>
+              <tr><td>물티슈</td><td>청소용품</td><td class="num">8</td><td>하은</td><td>2026-07-23</td><td class="num">10</td></tr>
             </tbody>
           </table>
         </div>
@@ -105,6 +105,8 @@
           <li><strong>첫 줄은 헤더입니다.</strong> 공백과 대소문자는 알아서 맞춰요
               (<code>물품 이름</code> = <code>물품이름</code>). <code>이름</code>·<code>품명</code>·<code>개수</code>·<code>닉네임</code> 같은 표기도 받습니다.</li>
           <li><strong>등록자 칸은 비워도 됩니다.</strong> 위에 적은 닉네임으로 채워져요.</li>
+          <li><strong>입고일·적정재고량도 비워도 됩니다.</strong> 각각 오늘 날짜와 5개로 채워져요.
+              <code>적정재고량</code>보다 적으면 대시보드의 재고 부족에 뜹니다.</li>
           <li><strong>이미 있는 물품과 이름이 같으면 수량을 더합니다.</strong>
               볼펜 5개가 있는데 엑셀에 볼펜 10개가 있으면 → 볼펜 15개 한 줄이 됩니다. 줄이 늘지 않아요.</li>
           <li><strong>잘못된 줄은 그 줄만 건너뜁니다.</strong> 없는 카테고리, 숫자가 아닌 수량 같은 건
@@ -117,9 +119,9 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js?v=5"></script>
-  <script src="app.js?v=5"></script>
-  <script src="sidebar.js?v=5"></script>
-  <script src="import.js?v=5"></script>
+  <script src="supabase-config.js?v=6"></script>
+  <script src="app.js?v=6"></script>
+  <script src="sidebar.js?v=6"></script>
+  <script src="import.js?v=6"></script>
 </body>
 </html>

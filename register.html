@@ -13,7 +13,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body data-page="register">
 
@@ -36,9 +36,16 @@
           <span class="count">문장으로 적으면 알아서 정리해 드려요</span>
         </h2>
 
-        <div class="field chat-owner-field">
-          <label for="chat-owner">등록자 닉네임</label>
-          <input type="text" id="chat-owner" maxlength="10" placeholder="예) 민서" autocomplete="off">
+        <div class="chat-opts">
+          <div class="field chat-owner-field">
+            <label for="chat-owner">등록자 닉네임</label>
+            <input type="text" id="chat-owner" maxlength="10" placeholder="예) 민서" autocomplete="off">
+          </div>
+
+          <div class="field chat-model-field">
+            <label for="chat-model">쓸 모델 <span class="free-tag">무료만</span></label>
+            <select id="chat-model"><option value="">불러오는 중…</option></select>
+          </div>
         </div>
 
         <div class="chat-row">
@@ -74,6 +81,16 @@
             <input type="number" id="f-qty" min="0" step="1" value="1" inputmode="numeric">
           </div>
 
+          <div class="field field-target">
+            <label for="f-target">적정 재고량</label>
+            <input type="number" id="f-target" min="0" step="1" value="5" inputmode="numeric">
+          </div>
+
+          <div class="field field-received">
+            <label for="f-received">입고일</label>
+            <input type="date" id="f-received">
+          </div>
+
           <div class="field field-owner">
             <label for="f-owner">등록자 닉네임</label>
             <input type="text" id="f-owner" maxlength="10" placeholder="예) 민서" autocomplete="off">
@@ -100,9 +117,9 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js?v=5"></script>
-  <script src="app.js?v=5"></script>
-  <script src="sidebar.js?v=5"></script>
-  <script src="register.js?v=5"></script>
+  <script src="supabase-config.js?v=6"></script>
+  <script src="app.js?v=6"></script>
+  <script src="sidebar.js?v=6"></script>
+  <script src="register.js?v=6"></script>
 </body>
 </html>

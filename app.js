@@ -11,8 +11,13 @@
 /** 표 이름 */
 var TABLE = 'items';
 
-/** 재고 부족 기준: 이 값 이하면 '부족'으로 본다 (PRD 6.2) */
-var LOW_STOCK = 3;
+/**
+ * 적정 재고량의 기본값.
+ * 물품마다 따로 정할 수 있고, 지금 수량이 이 값보다 적으면 '부족'으로 본다.
+ * (예전에는 '3개 이하' 라는 하나의 잣대를 모든 물품에 똑같이 썼다.
+ *  볼펜과 구급상자에 같은 기준을 쓰는 게 말이 안 돼서 물품별로 바꿨다.)
+ */
+var DEFAULT_TARGET = 5;
 
 /** 물품 이름 / 닉네임 길이 제한 (PRD 4) — DB 쪽 check 제약과 같은 값 */
 var NAME_MAX = 30;
@@ -102,8 +107,32 @@ function fromRow(row) {
     category: row.category,
     quantity: row.quantity,
     owner: row.owner,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
+    receivedAt: row.received_at,
+    targetQuantity: (row.target_quantity == null) ? DEFAULT_TARGET : row.target_quantity
   };
+}
+
+/** 오늘 날짜를 YYYY-MM-DD 로. 시간대 때문에 하루 어긋나지 않게 지역 시각으로 만든다. */
+function todayISO() {
+  var d = new Date();
+  function pad(n) { return n < 10 ? '0' + n : String(n); }
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+}
+
+/** 날짜 문자열이 YYYY-MM-DD 인지 */
+function isDateString(text) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(text)) && !isNaN(Date.parse(text));
+}
+
+/** 몇 개가 모자라나. 적정선을 채웠으면 0. */
+function shortageOf(item) {
+  return Math.max((item.targetQuantity == null ? DEFAULT_TARGET : item.targetQuantity) - item.quantity, 0);
+}
+
+/** 지금 부족한 상태인가 */
+function isLow(item) {
+  return shortageOf(item) > 0;
 }
 
 /* ---------------------------------------------------------
@@ -213,9 +242,29 @@ function validateInput(input) {
     return { ok: false, field: 'owner', message: '닉네임은 ' + OWNER_MAX + '자까지 쓸 수 있어요.' };
   }
 
+  // 입고일 — 안 적었으면 오늘. 미래 날짜는 막는다.
+  var receivedAt = String(input.receivedAt == null ? '' : input.receivedAt).trim();
+  if (receivedAt === '') receivedAt = todayISO();
+  if (!isDateString(receivedAt)) {
+    return { ok: false, field: 'receivedAt', message: '입고일은 2026-07-23 처럼 적어 주세요.' };
+  }
+  if (receivedAt > todayISO()) {
+    return { ok: false, field: 'receivedAt', message: '입고일이 미래일 수는 없어요.' };
+  }
+
+  // 적정 재고량 — 안 적었으면 기본값
+  var rawTarget = String(input.targetQuantity == null ? '' : input.targetQuantity).trim();
+  var targetQuantity = (rawTarget === '') ? DEFAULT_TARGET : Number(rawTarget);
+  if (!isFinite(targetQuantity) || Math.floor(targetQuantity) !== targetQuantity || targetQuantity < 0) {
+    return { ok: false, field: 'targetQuantity', message: '적정 재고량은 0 이상의 정수로 입력해 주세요.' };
+  }
+
   return {
     ok: true,
-    value: { name: name, category: category, quantity: quantity, owner: owner }
+    value: {
+      name: name, category: category, quantity: quantity, owner: owner,
+      received_at: receivedAt, target_quantity: targetQuantity
+    }
   };
 }
 
@@ -270,13 +319,18 @@ function changeQuantity(id, delta) {
  *
  * 이 함수는 '후보' 만 받아 온다. 저장은 사용자가 확인한 뒤에 한다.
  */
-function parseItemsFromText(text, defaultOwner) {
+function parseItemsFromText(text, defaultOwner, model) {
   var problem = clientProblem();
   if (problem) return Promise.reject(new Error(problem));
 
   return getClient()
     .functions.invoke('parse-items', {
-      body: { text: text, defaultOwner: defaultOwner }
+      body: {
+        text: text,
+        defaultOwner: defaultOwner,
+        model: model || '',
+        today: todayISO()      // 서버는 UTC 라 한국에서 하루 어긋날 수 있다
+      }
     })
     .then(function (res) {
       if (res.error) {
@@ -291,7 +345,28 @@ function parseItemsFromText(text, defaultOwner) {
         throw new Error(res.error.message || '함수를 부르지 못했어요.');
       }
       if (res.data && res.data.error) throw new Error(res.data.error);
-      return (res.data && res.data.items) || [];
+      return {
+        items: (res.data && res.data.items) || [],
+        model: (res.data && res.data.model) || ''
+      };
+    });
+}
+
+/**
+ * 쓸 수 있는 무료 모델 목록을 받아 온다.
+ * 함수가 오픈라우터 가격을 직접 확인해서 무료인 것만 골라 준다.
+ * 그래서 이 목록에 있는 건 전부 0원이 보장된다.
+ */
+function listFreeModels() {
+  var problem = clientProblem();
+  if (problem) return Promise.reject(new Error(problem));
+
+  return getClient()
+    .functions.invoke('parse-items', { body: { action: 'models' } })
+    .then(function (res) {
+      if (res.error) throw new Error(res.error.message || '모델 목록을 받지 못했어요.');
+      if (res.data && res.data.error) throw new Error(res.data.error);
+      return (res.data && res.data.models) || [];
     });
 }
 
@@ -349,11 +424,16 @@ function countItems(items) {
   return items.length;
 }
 
-/** 위젯 2. 재고 부족 목록 = 수량 3 이하, 적은 것부터 */
+/**
+ * 위젯 2. 재고 부족 목록 = 적정 재고량에 못 미치는 물품.
+ * 급한 것부터 = 모자란 개수가 많은 것부터.
+ */
 function lowStockItems(items) {
   return items
-    .filter(function (it) { return it.quantity <= LOW_STOCK; })
+    .filter(isLow)
     .sort(function (a, b) {
+      var d = shortageOf(b) - shortageOf(a);
+      if (d !== 0) return d;
       if (a.quantity !== b.quantity) return a.quantity - b.quantity;
       return a.name.localeCompare(b.name, 'ko');
     });

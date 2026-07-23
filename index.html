@@ -13,7 +13,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body data-page="dashboard">
 
@@ -31,30 +31,31 @@
       <div id="setup-warning"></div>
       <div id="load-error"></div>
 
+      <!-- 왼쪽은 좁게(요약), 오른쪽은 넓게(목록) -->
       <div class="dash-grid">
 
-        <!-- 위젯 1. 총 품목 수 -->
-        <section class="card">
+        <!-- 위 왼쪽. 총 품목 수 -->
+        <section class="card card-total">
           <h2 class="card-title">총 품목 수</h2>
           <div id="w-total"></div>
         </section>
 
-        <!-- 위젯 2. 재고 부족 목록 (수량 3개 이하) -->
-        <section class="card">
-          <h2 class="card-title">재고 부족 <span class="count">수량 3개 이하</span></h2>
-          <div id="w-low"></div>
+        <!-- 위 오른쪽. 최근 변경 내역 -->
+        <section class="card card-recent">
+          <h2 class="card-title">최근 변경 내역 <span class="count">최근 5건</span></h2>
+          <div id="w-recent"></div>
         </section>
 
-        <!-- 위젯 3. 카테고리별 분포 -->
-        <section class="card">
+        <!-- 아래 왼쪽. 카테고리별 분포 -->
+        <section class="card card-donut">
           <h2 class="card-title">카테고리별 분포 <span class="count">품목 수 기준</span></h2>
           <div id="w-donut"></div>
         </section>
 
-        <!-- 위젯 4. 최근 변경 내역 -->
-        <section class="card">
-          <h2 class="card-title">최근 변경 내역 <span class="count">최근 5건</span></h2>
-          <div id="w-recent"></div>
+        <!-- 아래 오른쪽. 재고 부족 -->
+        <section class="card card-low">
+          <h2 class="card-title">재고 부족 <span class="count">적정 재고량에 못 미치는 물품</span></h2>
+          <div id="w-low"></div>
         </section>
 
       </div>
@@ -63,9 +64,9 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js?v=5"></script>
-  <script src="app.js?v=5"></script>
-  <script src="sidebar.js?v=5"></script>
-  <script src="dashboard.js?v=5"></script>
+  <script src="supabase-config.js?v=6"></script>
+  <script src="app.js?v=6"></script>
+  <script src="sidebar.js?v=6"></script>
+  <script src="dashboard.js?v=6"></script>
 </body>
 </html>

@@ -484,12 +484,17 @@ body {
 .state-error { color: var(--danger); }
 
 /* ---------- 등록 폼 ---------- */
+/* 등록 폼: 이름은 한 줄 전체, 나머지는 3칸씩 */
 .form-grid {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) 96px minmax(0, 1.2fr) auto;
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 12px;
   align-items: end;
 }
+.form-grid .field-name,
+.form-grid .field-owner,
+.form-grid .field-submit { grid-column: 1 / -1; }
+.form-grid .btn-primary { width: 100%; }
 .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .field label { font-size: 12.5px; color: var(--text-secondary); font-weight: 550; }
 
@@ -643,12 +648,42 @@ input[aria-invalid="true"] { border-color: var(--danger); }
 .recent-foot a:hover { text-decoration: underline; }
 
 /* ---------- 대시보드 ---------- */
+/* 왼쪽은 좁게(요약 숫자·차트), 오른쪽은 넓게(목록) */
 .dash-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.75fr);
   gap: 16px;
+  align-items: start;
 }
 .dash-grid .card { margin-bottom: 0; }
+
+/* ---------- 재고 부족 위젯 ---------- */
+.low-list li { gap: 8px; }
+.low-gauge {
+  flex: none;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.low-gauge strong { color: var(--text-primary); font-weight: 650; }
+.low-sep { margin: 0 2px; opacity: 0.6; }
+
+.low-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 12px 0 0;
+  padding-top: 11px;
+  border-top: 1px solid var(--gridline);
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.low-foot strong { color: var(--text-primary); }
+.low-foot a { color: var(--accent); font-weight: 600; text-decoration: none; white-space: nowrap; }
+.low-foot a:hover { text-decoration: underline; }
 
 /* 위젯 1. 총 품목 수 — 큰 숫자 하나 */
 .hero {
@@ -721,7 +756,38 @@ input[aria-invalid="true"] { border-color: var(--danger); }
 /* =========================================================
    말로 등록 (register.html)
    ========================================================= */
-.chat-owner-field { max-width: 220px; margin-bottom: 12px; }
+.chat-opts {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.chat-owner-field { flex: 0 1 200px; }
+.chat-model-field { flex: 1 1 280px; min-width: 0; }
+.chat-model-field select { font-size: 13.5px; }
+
+/* '무료만' 딱지 — 유료 모델은 아예 목록에 없다는 표시 */
+.free-tag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--tag-new-bg);
+  color: var(--tag-new-text);
+  font-size: 10.5px;
+  font-weight: 700;
+  vertical-align: 1px;
+}
+
+.used-model {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--page);
+  border: 1px solid var(--border);
+  font-size: 11.5px;
+}
 
 .chat-row {
   display: flex;
@@ -927,10 +993,6 @@ input[aria-invalid="true"] { border-color: var(--danger); }
 /* ---------- 좁은 화면 ---------- */
 @media (max-width: 760px) {
   .form-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .form-grid .field-name { grid-column: 1 / -1; }
-  .form-grid .field-owner { grid-column: 1 / -1; }
-  .form-grid .field-submit { grid-column: 1 / -1; }
-  .form-grid .btn-primary { width: 100%; }
 }
 
 /* 왼쪽 메뉴가 자리를 먹으므로 위젯·단계는 조금 일찍 한 줄로 내린다 */
@@ -977,14 +1039,15 @@ input[aria-invalid="true"] { border-color: var(--danger); }
   .xls-actions .btn { width: 100%; }
   .dropzone { padding: 24px 14px; }
 
-  .chat-owner-field { max-width: none; }
+  .chat-opts { flex-direction: column; gap: 8px; }
+  .chat-owner-field, .chat-model-field { flex: 1 1 auto; }
   .chat-row { flex-direction: column; }
   .chat-row .btn { width: 100%; align-self: stretch; }
 
   /* 검색과 정렬을 위아래로 나눈다 */
   .toolbar { flex-direction: column; align-items: stretch; gap: 8px; }
-  .sorts { justify-content: space-between; }
-  .sort-btn { flex: 1 1 0; padding: 8px 4px; }
+  .sorts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sort-btn { padding: 8px 4px; }
   .page-head-row .btn { width: 100%; }
 }
 

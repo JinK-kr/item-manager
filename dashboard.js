@@ -33,28 +33,53 @@
   }
 
   /* =======================================================
-     위젯 2. 재고 부족 목록 (수량 3개 이하, 적은 것부터)
+     위젯 2. 재고 부족 — 적정 재고량에 못 미치는 물품
+
+     목록이 길어질 수 있다. 대시보드는 '지금 신경 쓸 일이 있나' 를 보는 곳이지
+     하나씩 처리하는 곳이 아니다. 그래서 급한 몇 건만 보여 주고
+     나머지는 물품 목록으로 넘긴다. 카드 높이가 들쭉날쭉하지 않아야
+     옆 칸과 줄이 맞기도 한다.
      ======================================================= */
+
+  var LOW_SHOWN = 5;   // 대시보드에 보여 줄 줄 수
+
   function renderLowStock(items) {
-    var low = lowStockItems(items);
+    var low = lowStockItems(items);   // 모자란 개수가 많은 것부터
 
     if (low.length === 0) {
       lowEl.innerHTML = '<p class="empty">' +
-        (items.length === 0 ? '등록된 물품이 없어요.' : '부족한 물품이 없어요.') +
+        (items.length === 0 ? '등록된 물품이 없어요.' : '적정 재고를 모두 채웠어요.') +
         '</p>';
       return;
     }
 
-    lowEl.innerHTML = '<ul class="mini-list">' + low.map(function (it) {
+    var shown = low.slice(0, LOW_SHOWN);
+    var rest = low.length - shown.length;
+    var needSum = low.reduce(function (s, it) { return s + shortageOf(it); }, 0);
+
+    var rows = shown.map(function (it) {
+      var short = shortageOf(it);
       var badge = it.quantity === 0
         ? '<span class="badge badge-out">재고 없음</span>'
-        : '<span class="badge badge-low">부족</span>';
+        : '<span class="badge badge-low">' + short + '개 부족</span>';
+
       return '<li>' +
           '<span class="mini-name">' + escapeHtml(it.name) + '</span>' +
-          '<span class="mini-qty">' + it.quantity + '개</span>' +
+          '<span class="low-gauge" title="현재 ' + it.quantity +
+            '개 / 적정 ' + it.targetQuantity + '개">' +
+            '<strong>' + it.quantity + '</strong>' +
+            '<span class="low-sep">/</span>' + it.targetQuantity +
+          '</span>' +
           badge +
         '</li>';
-    }).join('') + '</ul>';
+    }).join('');
+
+    var foot = '<p class="low-foot">' +
+      '<span>부족 <strong>' + low.length + '건</strong> · 채우려면 <strong>' + needSum + '개</strong></span>' +
+      '<a href="items.html">' + (rest > 0 ? '나머지 ' + rest + '건 포함 전체 보기' : '목록에서 채우기') + ' &rarr;</a>' +
+      '</p>';
+
+    lowEl.innerHTML = '<ul class="mini-list low-list">' + rows + '</ul>' + foot;
   }
 
   /* =======================================================

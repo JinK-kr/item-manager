@@ -36,6 +36,13 @@
       label: '수량순', dir: 'asc',
       cmp: function (a, b) { return a.quantity - b.quantity; },
       say: { asc: '적은 것부터', desc: '많은 것부터' }
+    },
+    received: {
+      label: '입고일순', dir: 'desc',
+      cmp: function (a, b) {
+        return String(a.receivedAt || '').localeCompare(String(b.receivedAt || ''));
+      },
+      say: { asc: '오래된 입고부터', desc: '최근 입고부터' }
     }
   };
 
@@ -56,10 +63,14 @@
 
   /* ---------- 목록 그리기 ---------- */
 
-  /** 수량에 따라 붙는 배지. 색만으로 알리지 않고 글자를 함께 쓴다. */
-  function badgeHtml(quantity) {
-    if (quantity === 0) return '<span class="badge badge-out">재고 없음</span>';
-    if (quantity <= LOW_STOCK) return '<span class="badge badge-low">부족</span>';
+  /**
+   * 수량에 따라 붙는 배지. 색만으로 알리지 않고 글자를 함께 쓴다.
+   * 부족 여부는 물품마다 정해 둔 적정 재고량과 견줘서 판단한다.
+   */
+  function badgeHtml(item) {
+    if (item.quantity === 0) return '<span class="badge badge-out">재고 없음</span>';
+    var short = shortageOf(item);
+    if (short > 0) return '<span class="badge badge-low">' + short + '개 부족</span>';
     return '';
   }
 
@@ -71,9 +82,11 @@
         '<div class="item-main">' +
           '<span class="item-name">' + safeName + '</span>' +
           '<span class="cat"><i class="dot dot-' + slot + '"></i>' + escapeHtml(item.category) + '</span>' +
-          badgeHtml(item.quantity) +
+          badgeHtml(item) +
         '</div>' +
-        '<div class="item-meta">' + escapeHtml(item.owner) + ' · ' + formatDateTime(item.updatedAt) + '</div>' +
+        '<div class="item-meta">' + escapeHtml(item.owner) +
+          ' · 입고 ' + escapeHtml(item.receivedAt || '-') +
+          ' · 적정 ' + item.targetQuantity + '개</div>' +
         '<div class="qty">' +
           '<button type="button" class="qty-btn" data-act="dec" aria-label="' + safeName + ' 수량 줄이기"' +
             (item.quantity === 0 ? ' disabled' : '') + '>&minus;</button>' +
@@ -87,7 +100,8 @@
   /** 검색어에 걸리는지 — 이름·카테고리·등록자를 함께 본다 */
   function matches(item, q) {
     if (!q) return true;
-    return (item.name + ' ' + item.category + ' ' + item.owner).toLowerCase().indexOf(q) !== -1;
+    return (item.name + ' ' + item.category + ' ' + item.owner + ' ' + (item.receivedAt || ''))
+      .toLowerCase().indexOf(q) !== -1;
   }
 
   /** 검색 + 정렬해서 지금 보여 줄 목록을 만든다 */
@@ -180,13 +194,14 @@
     li.querySelector('.qty-num').textContent = item.quantity;
     syncDecButton(li);
     li.querySelector('.item-meta').textContent =
-      item.owner + ' · ' + formatDateTime(item.updatedAt);
+      item.owner + ' · 입고 ' + (item.receivedAt || '-') +
+      ' · 적정 ' + item.targetQuantity + '개';
 
     var main = li.querySelector('.item-main');
     var oldBadge = main.querySelector('.badge');
     if (oldBadge) main.removeChild(oldBadge);
 
-    var html = badgeHtml(item.quantity);
+    var html = badgeHtml(item);
     if (html) main.insertAdjacentHTML('beforeend', html);
 
     // 손에 들고 있는 목록도 같이 고쳐 둔다 (검색·정렬을 다시 할 때 쓰인다)
