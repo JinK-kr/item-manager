@@ -104,6 +104,22 @@ python -m http.server 8765
 그래서 `change_quantity(item_id, delta)` 라는 DB 함수를 만들어 한 번에 처리합니다.
 0 아래로 내려가지 않게 막는 것도 이 함수 안에서 합니다.
 
+## 코드를 고쳐서 다시 올릴 때
+
+HTML 안의 파일 주소에 `?v=2` 같은 번호가 붙어 있습니다.
+
+```html
+<link rel="stylesheet" href="style.css?v=2">
+<script src="app.js?v=2"></script>
+```
+
+**CSS 나 JS 를 고쳤으면 이 번호를 올려 주세요** (`?v=2` → `?v=3`).
+`index.html` 과 `dashboard.html` 양쪽 다 바꿔야 합니다.
+
+번호를 안 올리면, 이미 접속했던 사람은 브라우저에 남아 있는 예전 파일을 계속 씁니다.
+새 HTML 에 옛 CSS 가 물려서 화면이 깨져 보일 수 있습니다.
+GitHub Pages 는 파일을 10분간 캐시하라고 알려 주기 때문에, 배포 직후에 특히 잘 생깁니다.
+
 ## 파일 구성
 
 ```
