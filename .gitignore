@@ -1,0 +1,13 @@
+# 내 컴퓨터에만 해당하는 설정 (공유하지 않는다)
+.claude/settings.local.json
+
+# OS 가 만드는 파일
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# 편집기
+.vscode/
+.idea/
+*.swp

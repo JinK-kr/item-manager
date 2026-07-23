@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>우리 반 물품 관리</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="wrap">
+
+    <header class="site-header">
+      <div>
+        <h1 class="site-title">우리 반 물품 관리</h1>
+        <p class="site-sub">공용 물품을 함께 등록하고 수량을 관리해요</p>
+      </div>
+      <a class="nav-link" href="dashboard.html">대시보드 보기 &rarr;</a>
+    </header>
+
+    <div id="storage-warning"></div>
+
+    <!-- F-01 물품 등록 -->
+    <section class="card">
+      <h2 class="card-title">물품 등록</h2>
+
+      <form id="add-form" class="form-grid" novalidate>
+        <div class="field field-name">
+          <label for="f-name">물품 이름</label>
+          <input type="text" id="f-name" maxlength="30" placeholder="예) 볼펜" autocomplete="off">
+        </div>
+
+        <div class="field field-category">
+          <label for="f-category">카테고리</label>
+          <select id="f-category"></select>
+        </div>
+
+        <div class="field field-qty">
+          <label for="f-qty">수량</label>
+          <input type="number" id="f-qty" min="0" step="1" value="1" inputmode="numeric">
+        </div>
+
+        <div class="field field-owner">
+          <label for="f-owner">등록자 닉네임</label>
+          <input type="text" id="f-owner" maxlength="10" placeholder="예) 민서" autocomplete="off">
+        </div>
+
+        <div class="field field-submit">
+          <button type="submit" class="btn btn-primary">등록</button>
+        </div>
+      </form>
+
+      <p id="form-msg" class="form-msg" role="status" aria-live="polite"></p>
+    </section>
+
+    <!-- 물품 목록 (F-02 수량 조절 · F-03 삭제) -->
+    <section class="card">
+      <h2 class="card-title">물품 목록 <span class="count" id="item-count"></span></h2>
+      <ul class="item-list" id="item-list"></ul>
+    </section>
+
+  </div>
+
+  <script src="app.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>
