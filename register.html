@@ -13,7 +13,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body data-page="register">
 
@@ -30,8 +30,33 @@
 
       <div id="setup-warning"></div>
 
+      <!-- F-05 말로 등록 -->
+      <section class="card chat-card">
+        <h2 class="card-title">말로 등록하기
+          <span class="count">문장으로 적으면 알아서 정리해 드려요</span>
+        </h2>
+
+        <div class="field chat-owner-field">
+          <label for="chat-owner">등록자 닉네임</label>
+          <input type="text" id="chat-owner" maxlength="10" placeholder="예) 민서" autocomplete="off">
+        </div>
+
+        <div class="chat-row">
+          <textarea id="chat-text" rows="2" maxlength="500"
+                    placeholder="예) 볼펜 20개랑 물티슈 5개 들어왔어"></textarea>
+          <button type="button" class="btn btn-primary" id="chat-go">읽어보기</button>
+        </div>
+
+        <p class="chat-hint">
+          등록만 됩니다. 지우거나 수량을 줄이는 건 <a href="items.html">물품 목록</a>에서 하세요.
+        </p>
+
+        <p id="chat-msg" class="xls-msg" role="status" aria-live="polite"></p>
+        <div id="chat-preview"></div>
+      </section>
+
       <section class="card">
-        <h2 class="card-title">새 물품</h2>
+        <h2 class="card-title">직접 입력</h2>
 
         <form id="add-form" class="form-grid" novalidate>
           <div class="field field-name">
@@ -75,9 +100,9 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js?v=4"></script>
-  <script src="app.js?v=4"></script>
-  <script src="sidebar.js?v=4"></script>
-  <script src="register.js?v=4"></script>
+  <script src="supabase-config.js?v=5"></script>
+  <script src="app.js?v=5"></script>
+  <script src="sidebar.js?v=5"></script>
+  <script src="register.js?v=5"></script>
 </body>
 </html>

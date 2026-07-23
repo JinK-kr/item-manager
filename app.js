@@ -263,6 +263,39 @@ function changeQuantity(id, delta) {
 }
 
 /**
+ * F-05 말로 등록 — 사람이 쓴 문장을 물품 후보로 바꾼다.
+ *
+ * 오픈라우터 키는 브라우저에 두면 안 되므로, Supabase Edge Function
+ * (parse-items) 이 대신 부른다. 여기서는 그 함수에게만 말을 건다.
+ *
+ * 이 함수는 '후보' 만 받아 온다. 저장은 사용자가 확인한 뒤에 한다.
+ */
+function parseItemsFromText(text, defaultOwner) {
+  var problem = clientProblem();
+  if (problem) return Promise.reject(new Error(problem));
+
+  return getClient()
+    .functions.invoke('parse-items', {
+      body: { text: text, defaultOwner: defaultOwner }
+    })
+    .then(function (res) {
+      if (res.error) {
+        // 함수가 400/500 을 주면 본문에 사람이 읽을 이유가 들어 있다
+        var ctx = res.error.context;
+        if (ctx && typeof ctx.json === 'function') {
+          return ctx.json().then(
+            function (body) { throw new Error((body && body.error) || res.error.message); },
+            function ()     { throw new Error(res.error.message || '함수를 부르지 못했어요.'); }
+          );
+        }
+        throw new Error(res.error.message || '함수를 부르지 못했어요.');
+      }
+      if (res.data && res.data.error) throw new Error(res.data.error);
+      return (res.data && res.data.items) || [];
+    });
+}
+
+/**
  * F-04 엑셀 일괄 등록.
  *
  * rows 는 이미 검사를 마친 배열이어야 한다.
