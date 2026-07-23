@@ -80,6 +80,9 @@
   function drawList(items) {
     countEl.textContent = '(' + items.length + '개)';
 
+    // 왼쪽 메뉴의 배지에 개수를 알려 준다 (sidebar.js)
+    window.dispatchEvent(new CustomEvent('items-loaded', { detail: { count: items.length } }));
+
     if (items.length === 0) {
       listEl.innerHTML = '<li class="empty">아직 등록된 물품이 없어요. 위에서 첫 물품을 등록해 보세요.</li>';
       return;

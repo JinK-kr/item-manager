@@ -4,20 +4,96 @@
    흐름:  파일 고르기 → 읽고 검사 → 미리보기 → 확인 → 등록
    읽자마자 등록하지 않는다. 실수로 두 번 올리는 걸 막기 위해서다.
 
-   같은 이름이 이미 있으면 수량을 더한다.
-   판정은 DB 함수 import_items() 가 하고, 미리보기는 화면에 있는
-   목록을 기준으로 미리 계산해 보여 주는 값이다.
+   엑셀 라이브러리(SheetJS, 약 900KB)는 처음부터 받지 않는다.
+   양식을 내려받거나 파일을 고를 때 그때 받는다.
+   대부분의 사용자는 +/− 만 누르고 가므로 그 사람들은 받을 필요가 없다.
    ========================================================= */
 (function () {
   'use strict';
 
+  var XLSX_URL = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+  var xlsxLoading = null;
+
+  /** 엑셀 라이브러리를 필요할 때 불러온다 */
+  function ensureXLSX() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    if (xlsxLoading) return xlsxLoading;
+
+    xlsxLoading = new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = XLSX_URL;
+      s.onload = function () {
+        if (window.XLSX) resolve(window.XLSX);
+        else reject(new Error('엑셀 라이브러리를 불러오지 못했어요.'));
+      };
+      s.onerror = function () {
+        xlsxLoading = null;   // 다음에 다시 시도할 수 있게
+        reject(new Error('엑셀 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.'));
+      };
+      document.head.appendChild(s);
+    });
+    return xlsxLoading;
+  }
+
+  /* ---------- 화면에 짧게 뜨는 알림 (업로드 영역이 없는 화면용) ---------- */
+  var toastTimer = null;
+  function toast(text, kind) {
+    var el = document.getElementById('nav-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'nav-toast';
+      el.className = 'toast';
+      el.setAttribute('role', 'status');
+      document.body.appendChild(el);
+    }
+    el.textContent = text;
+    el.className = 'toast is-on ' + (kind || '');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.className = 'toast ' + (kind || ''); }, 3500);
+  }
+
+  /* ---------- 양식 내려받기 (두 화면 모두에서 동작) ---------- */
+
+  function downloadTemplate(say) {
+    say('양식을 만드는 중…', '');
+    ensureXLSX()
+      .then(function (XLSX) {
+        var aoa = [
+          ['물품이름', '카테고리', '수량', '등록자'],
+          ['볼펜',       '문구류',   24, '민서'],
+          ['건전지 AA',  '전자기기',  3, '도윤'],
+          ['물티슈',     '청소용품',  8, '하은'],
+          ['구급상자',   '기타',      1, '예린']
+        ];
+        var ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = [{ wch: 18 }, { wch: 12 }, { wch: 8 }, { wch: 12 }];
+        var wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '물품목록');
+        XLSX.writeFile(wb, '물품등록_양식.xlsx');
+        say('양식을 내려받았어요. 카테고리는 문구류·전자기기·청소용품·기타 중에서만 적어 주세요.', 'ok');
+      })
+      .catch(function (err) { say(err.message, 'error'); });
+  }
+
+  // 왼쪽 메뉴의 '양식 내려받기'
+  var navTemplate = document.getElementById('nav-template');
+  if (navTemplate) {
+    navTemplate.addEventListener('click', function () {
+      downloadTemplate(function (text, kind) { toast(text, kind); });
+    });
+  }
+
+  /* =======================================================
+     아래는 업로드 영역이 있는 화면(index.html)에서만 동작한다
+     ======================================================= */
+
   var fileEl     = document.getElementById('xls-file');
+  if (!fileEl) return;
+
   var uploaderEl = document.getElementById('xls-uploader');
   var templateEl = document.getElementById('xls-template');
   var previewEl  = document.getElementById('xls-preview');
   var msgEl      = document.getElementById('xls-msg');
-
-  if (!fileEl) return;   // 업로드 영역이 없는 화면에서는 아무것도 하지 않는다
 
   /** 한 번에 올릴 수 있는 최대 줄 수 */
   var MAX_ROWS = 500;
@@ -60,26 +136,8 @@
     pending = null;
   }
 
-  /* ---------- 양식 내려받기 ---------- */
-
   templateEl.addEventListener('click', function () {
-    if (!window.XLSX) {
-      showMsg('엑셀 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.', 'error');
-      return;
-    }
-    var aoa = [
-      ['물품이름', '카테고리', '수량', '등록자'],
-      ['볼펜',       '문구류',   24, '민서'],
-      ['건전지 AA',  '전자기기',  3, '도윤'],
-      ['물티슈',     '청소용품',  8, '하은'],
-      ['구급상자',   '기타',      1, '예린']
-    ];
-    var ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [{ wch: 18 }, { wch: 12 }, { wch: 8 }, { wch: 12 }];
-    var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '물품목록');
-    XLSX.writeFile(wb, '물품등록_양식.xlsx');
-    showMsg('양식을 내려받았어요. 카테고리는 문구류·전자기기·청소용품·기타 중에서만 적어 주세요.', 'ok');
+    downloadTemplate(showMsg);
   });
 
   /* ---------- 파일 읽기 ---------- */
@@ -89,33 +147,28 @@
     clearPreview();
     if (!file) return;
 
-    if (!window.XLSX) {
-      showMsg('엑셀 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.', 'error');
-      return;
-    }
-
     showMsg('파일을 읽는 중…', '');
-    var reader = new FileReader();
 
-    reader.onerror = function () {
-      showMsg('파일을 읽지 못했어요.', 'error');
-    };
-
-    reader.onload = function (ev) {
-      var matrix;
-      try {
-        var wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
-        if (!wb.SheetNames.length) throw new Error('시트가 없습니다.');
-        var sheet = wb.Sheets[wb.SheetNames[0]];   // 첫 번째 시트만 읽는다
-        matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', blankrows: false });
-      } catch (e) {
-        showMsg('엑셀 파일로 읽지 못했어요. .xlsx 또는 .csv 인지 확인해 주세요.', 'error');
-        return;
-      }
-      handleMatrix(matrix, file.name);
-    };
-
-    reader.readAsArrayBuffer(file);
+    ensureXLSX()
+      .then(function (XLSX) {
+        return new Promise(function (resolve, reject) {
+          var reader = new FileReader();
+          reader.onerror = function () { reject(new Error('파일을 읽지 못했어요.')); };
+          reader.onload = function (ev) {
+            try {
+              var wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+              if (!wb.SheetNames.length) throw new Error('시트가 없습니다.');
+              var sheet = wb.Sheets[wb.SheetNames[0]];   // 첫 번째 시트만 읽는다
+              resolve(XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', blankrows: false }));
+            } catch (e) {
+              reject(new Error('엑셀 파일로 읽지 못했어요. .xlsx 또는 .csv 인지 확인해 주세요.'));
+            }
+          };
+          reader.readAsArrayBuffer(file);
+        });
+      })
+      .then(function (matrix) { handleMatrix(matrix, file.name); })
+      .catch(function (err) { showMsg(err.message, 'error'); });
   });
 
   /* ---------- 줄마다 검사하기 ---------- */
@@ -320,4 +373,18 @@
         confirmBtn.textContent = pending.length + '건 등록하기';
       });
   }
+
+  /* ---------- 다른 화면에서 '엑셀 업로드' 로 넘어왔을 때 ---------- */
+  // 주소 끝이 #import 면 이 칸을 잠깐 밝혀서 어디로 왔는지 알려 준다
+  function flashImport() {
+    if (location.hash !== '#import') return;
+    var card = document.getElementById('import');
+    if (!card) return;
+    card.classList.remove('is-flash');
+    void card.offsetWidth;            // 애니메이션을 다시 트는 방법
+    card.classList.add('is-flash');
+    fileEl.focus({ preventScroll: true });
+  }
+  window.addEventListener('hashchange', flashImport);
+  flashImport();
 })();

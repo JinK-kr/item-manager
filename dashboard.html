@@ -6,53 +6,58 @@
   <title>현황 대시보드 · 우리 반 물품 관리</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <div class="wrap">
+<body data-page="dashboard">
 
-    <header class="site-header">
-      <div>
-        <h1 class="site-title">현황 대시보드</h1>
-        <p class="site-sub">지금 물품이 어떤 상태인지 한눈에 봐요</p>
+  <!-- 왼쪽 메뉴가 여기에 만들어진다 (sidebar.js) -->
+  <div id="sidebar-slot"></div>
+
+  <main class="content">
+    <div class="content-inner">
+
+      <header class="page-head">
+        <h1 class="page-title">현황 대시보드</h1>
+        <p class="page-sub">지금 물품이 어떤 상태인지 한눈에 봐요.</p>
+      </header>
+
+      <div id="setup-warning"></div>
+      <div id="load-error"></div>
+
+      <div class="dash-grid">
+
+        <!-- 위젯 1. 총 품목 수 -->
+        <section class="card">
+          <h2 class="card-title">총 품목 수</h2>
+          <div id="w-total"></div>
+        </section>
+
+        <!-- 위젯 2. 재고 부족 목록 (수량 3개 이하) -->
+        <section class="card">
+          <h2 class="card-title">재고 부족 <span class="count">수량 3개 이하</span></h2>
+          <div id="w-low"></div>
+        </section>
+
+        <!-- 위젯 3. 카테고리별 분포 -->
+        <section class="card">
+          <h2 class="card-title">카테고리별 분포 <span class="count">품목 수 기준</span></h2>
+          <div id="w-donut"></div>
+        </section>
+
+        <!-- 위젯 4. 최근 변경 내역 -->
+        <section class="card">
+          <h2 class="card-title">최근 변경 내역 <span class="count">최근 5건</span></h2>
+          <div id="w-recent"></div>
+        </section>
+
       </div>
-      <a class="nav-link" href="index.html">&larr; 물품 목록으로</a>
-    </header>
-
-    <div id="setup-warning"></div>
-    <div id="load-error"></div>
-
-    <div class="dash-grid">
-
-      <!-- 위젯 1. 총 품목 수 -->
-      <section class="card">
-        <h2 class="card-title">총 품목 수</h2>
-        <div id="w-total"></div>
-      </section>
-
-      <!-- 위젯 2. 재고 부족 목록 (수량 3개 이하) -->
-      <section class="card">
-        <h2 class="card-title">재고 부족 <span class="count">수량 3개 이하</span></h2>
-        <div id="w-low"></div>
-      </section>
-
-      <!-- 위젯 3. 카테고리별 분포 -->
-      <section class="card">
-        <h2 class="card-title">카테고리별 분포 <span class="count">품목 수 기준</span></h2>
-        <div id="w-donut"></div>
-      </section>
-
-      <!-- 위젯 4. 최근 변경 내역 -->
-      <section class="card">
-        <h2 class="card-title">최근 변경 내역 <span class="count">최근 5건</span></h2>
-        <div id="w-recent"></div>
-      </section>
 
     </div>
-
-  </div>
+  </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
   <script src="app.js"></script>
+  <script src="sidebar.js"></script>
   <script src="dashboard.js"></script>
+  <script src="import.js"></script>
 </body>
 </html>

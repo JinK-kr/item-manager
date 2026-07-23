@@ -43,6 +43,7 @@
 
   --radius:          10px;
   --shadow:          0 1px 2px rgba(11, 11, 11, 0.05);
+  --nav-w:           232px;   /* 왼쪽 메뉴 너비 */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -85,7 +86,7 @@
 
 body {
   margin: 0;
-  padding: 0 16px 64px;
+  padding: 0;
   background: var(--page);
   color: var(--text-primary);
   font-family: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo",
@@ -95,31 +96,186 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
-.wrap { max-width: 880px; margin: 0 auto; }
+/* =========================================================
+   왼쪽 메뉴 + 오른쪽 내용
+   넓은 화면에서는 메뉴가 늘 붙어 있고,
+   좁은 화면에서는 숨었다가 햄버거 버튼으로 열린다.
+   ========================================================= */
 
-/* ---------- 머리말 ---------- */
-.site-header {
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--nav-w);
+  background: var(--surface-1);
+  border-right: 1px solid var(--border);
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 28px 0 20px;
+  flex-direction: column;
+  padding: 18px 12px 16px;
+  overflow-y: auto;
+  z-index: 40;
 }
-.site-title { margin: 0; font-size: 21px; font-weight: 650; letter-spacing: -0.01em; }
-.site-sub { margin: 2px 0 0; font-size: 13px; color: var(--text-muted); }
-.nav-link {
-  color: var(--text-secondary);
+
+.content { margin-left: var(--nav-w); min-width: 0; }
+.content-inner { max-width: 900px; margin: 0 auto; padding: 26px 22px 72px; }
+
+/* ---------- 메뉴 머리 ---------- */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   text-decoration: none;
+  color: var(--text-primary);
+  padding: 4px 10px 18px;
+}
+.brand-mark {
+  flex: none;
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: -0.02em;
+}
+.brand-name { font-size: 13.5px; font-weight: 650; line-height: 1.32; }
+
+/* ---------- 메뉴 항목 ---------- */
+.nav { display: flex; flex-direction: column; gap: 2px; }
+
+.nav-group {
+  margin: 14px 0 5px;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+.nav-group:first-child { margin-top: 0; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
   font-size: 14px;
   font-weight: 550;
-  padding: 7px 13px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface-1);
-  white-space: nowrap;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
 }
-.nav-link:hover { background: var(--btn-hover); color: var(--text-primary); }
+.nav-item svg {
+  flex: none;
+  width: 16px; height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.nav-item svg circle:not([r="5.6"]) { fill: currentColor; stroke: none; }
+.nav-label { flex: 1 1 auto; min-width: 0; }
+
+.nav-item:hover { background: var(--btn-hover); color: var(--text-primary); }
+.nav-item.is-active {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.nav-item.is-active:hover { background: var(--accent); filter: brightness(1.06); }
+.nav-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.nav-badge {
+  flex: none;
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--page);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 650;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.nav-badge:empty { display: none; }
+.nav-item.is-active .nav-badge {
+  background: rgba(255, 255, 255, 0.22);
+  color: var(--accent-text);
+}
+
+.nav-foot {
+  margin: auto 0 0;
+  padding: 18px 10px 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* ---------- 햄버거 버튼과 가림막 (좁은 화면에서만 보인다) ---------- */
+.nav-toggle {
+  display: none;
+  position: fixed;
+  top: 12px; left: 12px;
+  z-index: 60;
+  width: 40px; height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+.nav-toggle svg {
+  width: 18px; height: 18px;
+  fill: none; stroke: currentColor;
+  stroke-width: 1.6; stroke-linecap: round;
+}
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  background: rgba(11, 11, 11, 0.45);
+}
+.scrim[hidden] { display: none; }
+
+/* ---------- 화면 제목 ---------- */
+.page-head { padding: 2px 0 20px; }
+.page-title { margin: 0; font-size: 23px; font-weight: 680; letter-spacing: -0.015em; }
+.page-sub { margin: 4px 0 0; font-size: 13.5px; color: var(--text-muted); }
+
+/* ---------- 짧게 뜨는 알림 ---------- */
+.toast {
+  /* 가운데 정렬을 transform 없이 한다 (위 사이드바와 같은 이유) */
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 24px;
+  margin: 0 auto;
+  z-index: 70;
+  width: fit-content;
+  max-width: min(440px, calc(100vw - 32px));
+  padding: 11px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: 13.5px;
+  box-shadow: 0 4px 16px rgba(11, 11, 11, 0.14);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+.toast.is-on { opacity: 1; }
+.toast.error { border-color: var(--danger); color: var(--danger); }
 
 /* ---------- 카드 ---------- */
 .card {
@@ -388,29 +544,13 @@ input[aria-invalid="true"] { border-color: var(--danger); }
 }
 
 /* ---------- 엑셀 일괄 등록 ---------- */
-.xls-head {
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  list-style: none;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.xls-head::-webkit-details-marker { display: none; }
-.xls-head::before {
-  content: '▸';
-  color: var(--text-muted);
-  font-size: 11px;
-  transform: translateY(-1px);
-}
-.xls[open] .xls-head::before { content: '▾'; }
-.xls-head:hover { color: var(--text-primary); }
-.xls-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
 
-.xls-body { padding-top: 14px; }
+/* 왼쪽 메뉴의 '엑셀 업로드' 로 넘어오면 이 칸을 잠깐 밝힌다 */
+@keyframes card-flash {
+  from { box-shadow: 0 0 0 3px var(--accent); }
+  to   { box-shadow: var(--shadow); }
+}
+#import.is-flash { animation: card-flash 1.4s ease-out; }
 
 .xls-help {
   margin: 0 0 14px;
@@ -519,12 +659,30 @@ input[aria-invalid="true"] { border-color: var(--danger); }
   .form-grid .field-owner { grid-column: 1 / -1; }
   .form-grid .field-submit { grid-column: 1 / -1; }
   .form-grid .btn-primary { width: 100%; }
+}
+
+/* 왼쪽 메뉴가 자리를 먹으므로 위젯은 조금 일찍 한 줄로 내린다 */
+@media (max-width: 980px) {
   .dash-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* 여기부터 메뉴가 서랍으로 바뀐다 */
+@media (max-width: 900px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 200ms ease;
+    box-shadow: 0 0 28px rgba(11, 11, 11, 0.2);
+  }
+  .sidebar.is-open { transform: none; }
+  .content { margin-left: 0; }
+  .content-inner { padding-top: 64px; }   /* 햄버거 버튼이 가리지 않게 */
+  .nav-toggle { display: flex; }
+}
+
 @media (max-width: 560px) {
-  body { padding: 0 12px 48px; }
+  .content-inner { padding: 60px 14px 56px; }
   .card { padding: 15px; }
+  .page-title { font-size: 20px; }
   .item {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
@@ -547,5 +705,5 @@ input[aria-invalid="true"] { border-color: var(--danger); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; }
+  * { transition: none !important; animation: none !important; }
 }

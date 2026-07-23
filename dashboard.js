@@ -154,6 +154,9 @@
   }
 
   function drawAll(items) {
+    // 왼쪽 메뉴의 배지에 개수를 알려 준다 (sidebar.js)
+    window.dispatchEvent(new CustomEvent('items-loaded', { detail: { count: items.length } }));
+
     renderTotal(items);
     renderLowStock(items);
     renderDonut(items);

@@ -3,103 +3,101 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>우리 반 물품 관리</title>
+  <title>물품 목록 · 우리 반 물품 관리</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <div class="wrap">
+<body data-page="list">
 
-    <header class="site-header">
-      <div>
-        <h1 class="site-title">우리 반 물품 관리</h1>
-        <p class="site-sub">공용 물품을 함께 등록하고 수량을 관리해요</p>
-      </div>
-      <a class="nav-link" href="dashboard.html">대시보드 보기 &rarr;</a>
-    </header>
+  <!-- 왼쪽 메뉴가 여기에 만들어진다 (sidebar.js) -->
+  <div id="sidebar-slot"></div>
 
-    <div id="setup-warning"></div>
+  <main class="content">
+    <div class="content-inner">
 
-    <!-- F-01 물품 등록 -->
-    <section class="card">
-      <h2 class="card-title">물품 등록</h2>
+      <header class="page-head">
+        <h1 class="page-title">물품 목록</h1>
+        <p class="page-sub">공용 물품을 등록하고 수량을 관리해요.</p>
+      </header>
 
-      <form id="add-form" class="form-grid" novalidate>
-        <div class="field field-name">
-          <label for="f-name">물품 이름</label>
-          <input type="text" id="f-name" maxlength="30" placeholder="예) 볼펜" autocomplete="off">
-        </div>
+      <div id="setup-warning"></div>
 
-        <div class="field field-category">
-          <label for="f-category">카테고리</label>
-          <select id="f-category"></select>
-        </div>
+      <!-- F-01 물품 등록 -->
+      <section class="card">
+        <h2 class="card-title">물품 등록</h2>
 
-        <div class="field field-qty">
-          <label for="f-qty">수량</label>
-          <input type="number" id="f-qty" min="0" step="1" value="1" inputmode="numeric">
-        </div>
-
-        <div class="field field-owner">
-          <label for="f-owner">등록자 닉네임</label>
-          <input type="text" id="f-owner" maxlength="10" placeholder="예) 민서" autocomplete="off">
-        </div>
-
-        <div class="field field-submit">
-          <button type="submit" class="btn btn-primary">등록</button>
-        </div>
-      </form>
-
-      <p id="form-msg" class="form-msg" role="status" aria-live="polite"></p>
-    </section>
-
-    <!-- F-04 엑셀 일괄 등록 -->
-    <section class="card">
-      <details class="xls">
-        <summary class="xls-head">
-          엑셀로 한 번에 등록하기
-          <span class="count">처음 재고를 넣을 때 편해요</span>
-        </summary>
-
-        <div class="xls-body">
-          <p class="xls-help">
-            첫 줄에 <code>물품이름</code> · <code>카테고리</code> · <code>수량</code> · <code>등록자</code> 를 적고,
-            둘째 줄부터 물품을 적어 주세요. <code>.csv</code> 도 됩니다.<br>
-            이미 있는 물품과 이름이 같으면 <strong>수량을 더합니다.</strong>
-            등록하기 전에 무엇이 들어갈지 먼저 보여 드려요.
-          </p>
-
-          <div class="xls-controls">
-            <button type="button" class="btn" id="xls-template">양식 내려받기</button>
-
-            <div class="field">
-              <label for="xls-uploader">등록자 칸이 빈 줄에 쓸 닉네임</label>
-              <input type="text" id="xls-uploader" maxlength="10" placeholder="예) 민서" autocomplete="off">
-            </div>
-
-            <div class="field">
-              <label for="xls-file">파일 고르기</label>
-              <input type="file" id="xls-file" accept=".xlsx,.xls,.csv">
-            </div>
+        <form id="add-form" class="form-grid" novalidate>
+          <div class="field field-name">
+            <label for="f-name">물품 이름</label>
+            <input type="text" id="f-name" maxlength="30" placeholder="예) 볼펜" autocomplete="off">
           </div>
 
-          <p id="xls-msg" class="xls-msg" role="status" aria-live="polite"></p>
-          <div id="xls-preview"></div>
+          <div class="field field-category">
+            <label for="f-category">카테고리</label>
+            <select id="f-category"></select>
+          </div>
+
+          <div class="field field-qty">
+            <label for="f-qty">수량</label>
+            <input type="number" id="f-qty" min="0" step="1" value="1" inputmode="numeric">
+          </div>
+
+          <div class="field field-owner">
+            <label for="f-owner">등록자 닉네임</label>
+            <input type="text" id="f-owner" maxlength="10" placeholder="예) 민서" autocomplete="off">
+          </div>
+
+          <div class="field field-submit">
+            <button type="submit" class="btn btn-primary">등록</button>
+          </div>
+        </form>
+
+        <p id="form-msg" class="form-msg" role="status" aria-live="polite"></p>
+      </section>
+
+      <!-- F-04 엑셀 일괄 등록 (왼쪽 메뉴의 '엑셀 업로드' 가 여기로 온다) -->
+      <section class="card" id="import">
+        <h2 class="card-title">엑셀로 한 번에 등록하기
+          <span class="count">처음 재고를 넣을 때 편해요</span>
+        </h2>
+
+        <p class="xls-help">
+          첫 줄에 <code>물품이름</code> · <code>카테고리</code> · <code>수량</code> · <code>등록자</code> 를 적고,
+          둘째 줄부터 물품을 적어 주세요. <code>.csv</code> 도 됩니다.<br>
+          이미 있는 물품과 이름이 같으면 <strong>수량을 더합니다.</strong>
+          등록하기 전에 무엇이 들어갈지 먼저 보여 드려요.
+        </p>
+
+        <div class="xls-controls">
+          <button type="button" class="btn" id="xls-template">양식 내려받기</button>
+
+          <div class="field">
+            <label for="xls-uploader">등록자 칸이 빈 줄에 쓸 닉네임</label>
+            <input type="text" id="xls-uploader" maxlength="10" placeholder="예) 민서" autocomplete="off">
+          </div>
+
+          <div class="field">
+            <label for="xls-file">파일 고르기</label>
+            <input type="file" id="xls-file" accept=".xlsx,.xls,.csv">
+          </div>
         </div>
-      </details>
-    </section>
 
-    <!-- 물품 목록 (F-02 수량 조절 · F-03 삭제) -->
-    <section class="card">
-      <h2 class="card-title">물품 목록 <span class="count" id="item-count"></span></h2>
-      <ul class="item-list" id="item-list"></ul>
-    </section>
+        <p id="xls-msg" class="xls-msg" role="status" aria-live="polite"></p>
+        <div id="xls-preview"></div>
+      </section>
 
-  </div>
+      <!-- 물품 목록 (F-02 수량 조절 · F-03 삭제) -->
+      <section class="card">
+        <h2 class="card-title">등록된 물품 <span class="count" id="item-count"></span></h2>
+        <ul class="item-list" id="item-list"></ul>
+      </section>
+
+    </div>
+  </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="supabase-config.js"></script>
   <script src="app.js"></script>
+  <script src="sidebar.js"></script>
   <script src="index.js"></script>
   <script src="import.js"></script>
 </body>
